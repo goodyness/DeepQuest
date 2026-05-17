@@ -1,8 +1,0 @@
-Create a unambiguous natural-language search prompt (requiring referencing 6-7+ distinct web sources to complete.)
-
-Provide the 6-7+ URLs required to answer your prompt.
-Provide the singular correct answer to the prompt
-Write an explanation on how the sources you provided lead to the answer
-Edit a list of sub-atomic claims (fact fanout) for accuracy
-Write + refine a generated ideal search trajectory
-
