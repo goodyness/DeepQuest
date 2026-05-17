@@ -1,0 +1,169 @@
+DEEPQUEST BENCHMARK QUESTIONS — MANUALLY RESEARCHED
+=====================================================
+
+===========================================================
+QUESTION 1: The Architect of the First American Monopoly
+===========================================================
+
+PROMPT:
+In January 1882, a little-known Pennsylvania corporate attorney employed by
+a powerful oil industrialist devised an entirely new legal structure — never
+previously used in American commerce — that allowed 40 separate companies to
+be pooled under a single controlling body without violating state laws
+prohibiting corporations from owning stock in other corporations. The
+structure he invented controlled approximately 90% of U.S. oil refining
+within a decade and became the direct legal target of the landmark 1911
+U.S. Supreme Court dissolution ruling. Ida Tarbell's five-year investigative
+series in McClure's Magazine (1902–1904) specifically named this attorney as
+the architect of the arrangement.
+
+Using at least six independent sources, identify the attorney who invented
+this legal structure and name the structure itself.
+
+SOURCES:
+1. https://en.wikipedia.org/wiki/Samuel_Calvin_Tate_Dodd
+2. https://www.encyclopedia.com/reference/encyclopedias-almanacs-transcripts-and-maps/dodd-samuel-calvin-tate
+3. https://en.wikipedia.org/wiki/Standard_Oil
+4. https://www.britannica.com/money/Standard-Oil
+5. https://energyhistory.yale.edu/ida-m-tarbell-the-history-of-the-standard-oil-company-1904/
+6. https://www.gutenberg.org/ebooks/60692/
+7. https://en.wikisource.org/wiki/The_History_of_the_Standard_Oil_Company/Volume_2/Appendix/Number_52
+8. https://www.americanheritage.com/ida-tarbell-takes-rockefeller-2
+
+ANSWER:
+SAMUEL CALVIN TATE DODD — THE STANDARD OIL TRUST
+
+EXPLANATION:
+The answer is Samuel Calvin Tate Dodd, general counsel to John D. Rockefeller's
+oil interests, and the legal structure he invented was the business trust.
+Source [1] (Wikipedia, Samuel Calvin Tate Dodd) confirms he was admitted to
+the Pennsylvania bar in 1859 and is credited with devising the trust arrangement
+that allowed Rockefeller to consolidate control across state lines. Source [2]
+(Encyclopedia.com) independently states he "devised the business trust arrangement
+by which John D. Rockefeller was able to consolidate control of many companies."
+Source [3] (Wikipedia, Standard Oil) documents that on January 2, 1882, 41
+investors signed the Standard Oil Trust Agreement, pooling 40 companies into a
+single holding agency valued at $70 million. Source [4] (Britannica) confirms
+Standard Oil controlled almost all U.S. oil production from 1870 to 1911.
+Source [5] (Yale Energy History) directly links Tarbell's investigation to the
+1911 Supreme Court dissolution. Source [6] (Project Gutenberg) provides the
+full primary text of Tarbell's book. Source [7] (Wikisource) reproduces the
+original 1882 Trust Agreement text from Congressional records. Source [8]
+(American Heritage) confirms the McClure's series ran 1902–1904 and directly
+caused the breakup. No other attorney in the historical record is credited with
+inventing the trust structure used in the 1882 agreement.
+
+FACT_FANOUT:
+1. Samuel Calvin Tate Dodd was admitted to the Pennsylvania bar in 1859, the year oil was discovered in the state ([1])
+2. Dodd was employed by Rockefeller's oil interests as general counsel ([2])
+3. Dodd invented the business trust legal structure to circumvent state laws prohibiting cross-state corporate stock ownership ([2], [3])
+4. The Standard Oil Trust Agreement was signed on January 2, 1882, by 41 investors pooling 40 companies ([3])
+5. The original trust was valued at $70 million and controlled ~90% of U.S. oil refining ([3], [4])
+6. Ida Tarbell published her investigation in McClure's Magazine from 1902 to 1904, naming Dodd's structure as the mechanism of monopoly ([5], [8])
+7. The U.S. Supreme Court ordered Standard Oil dissolved on May 15, 1911, citing the Sherman Antitrust Act ([5])
+8. The dissolution split Standard Oil into 33–34 successor companies, including what later became ExxonMobil, Chevron, and BP America ([3])
+
+SEARCH_TRAJECTORY:
+1. Search "Standard Oil Trust 1882 attorney inventor" — leads to Samuel Dodd as the credited legal architect across multiple encyclopedic sources.
+2. Search "Samuel Calvin Tate Dodd biography" — confirms his Pennsylvania background, Rockefeller employment, and specific role in drafting the 1882 agreement.
+3. Consult Wikisource for the original 1882 Trust Agreement text — primary source confirming the legal structure and signatories.
+4. Read Ida Tarbell's History of the Standard Oil Company (Gutenberg) — confirms Dodd is named as architect in the original investigative record.
+5. Cross-reference Yale Energy History and Britannica to confirm the causal chain: Dodd's trust → Tarbell's investigation → 1911 Supreme Court ruling.
+6. Verify no other attorney is credited with the invention in any of the above sources — confirms uniqueness of the answer.
+
+===========================================================
+QUESTION 2: The Hidden Pivot of the Typewriter Revolution
+===========================================================
+
+PROMPT:
+In 1867, a Milwaukee printer and newspaper editor began developing a
+mechanical writing machine with two colleagues. After years of failed
+attempts to find a manufacturer, he sold his patent rights outright for
+$12,000 — a decision he would later call the worst of his life. The man
+who purchased those rights for a royalty arrangement instead of a flat fee
+then personally persuaded a famous arms manufacturer — whose company had
+never made a consumer product — to produce the device commercially. That
+arms manufacturer placed the machine on the market on July 1, 1874, and
+within months the celebrated American author who would later write
+"Adventures of Huckleberry Finn" purchased one and described it in letters
+as his "new-fangled writing machine," becoming the first known author to
+submit a typewritten manuscript to a publisher.
+
+Using at least six independent sources, identify the businessman who
+purchased the patent rights, persuaded the arms manufacturer to produce
+the device, and ultimately earned $1.5 million in royalties from the
+invention he did not create.
+
+SOURCES:
+1. https://en.wikipedia.org/wiki/James_Densmore
+2. https://en.wikipedia.org/wiki/Sholes_and_Glidden_typewriter
+3. https://lemelson.mit.edu/resources/christopher-sholes
+4. https://historyofinformation.com/detail.php?id=2134
+5. https://buffalohistorymuseum.com/2015/04/17/spotlight-artifact-sholes-glidden-typewritter/
+6. https://americanhistory.si.edu/collections/search/object/nmah_850542
+7. https://guides.loc.gov/this-month-in-business-history/march/typewriter-production-began
+8. https://www.historyatlas.com/events/sholes-and-densmore-decide-to-have-the-sholes/
+
+ANSWER:
+JAMES DENSMORE
+
+EXPLANATION:
+The answer is James Densmore (1820–1889), an American businessman who became
+the financial backer and commercial driving force behind the world's first
+commercially successful typewriter. Source [1] (Wikipedia, James Densmore)
+confirms he was a business associate of Christopher Sholes and provided the
+financial backing that kept the typewriter project alive after Sholes and
+Soule nearly abandoned it. Source [2] (Wikipedia, Sholes and Glidden typewriter)
+documents that Densmore replaced Soule as the project's backer, and that after
+several failed manufacturing attempts, the machine was acquired by E. Remington
+and Sons in early 1873. Source [3] (MIT Lemelson Center) states that "Densmore
+convinced a dubious Philo Remington — whose company was best known then for its
+rifles — to market the device." Source [4] (History of Information) records that
+in 1872 the patent was sold for $12,000 to Densmore and Yost, who then licensed
+it to E. Remington & Sons. Source [5] (Buffalo History Museum) confirms Sholes
+sold his rights to Densmore, who approached Philo Remington directly. Source [6]
+(Smithsonian) confirms the Remington-made typewriter was placed on the market
+and that Mark Twain was among its first buyers. Source [7] (Library of Congress)
+documents the March 1873 start of production. Source [8] (History Atlas) records
+that while Sholes sold his half-share for $12,000, Densmore insisted on a royalty
+that eventually earned him $1.5 million — confirming the uniqueness of his role
+as the commercial pivot between invention and mass adoption.
+
+FACT_FANOUT:
+1. Christopher Latham Sholes invented the typewriter in Milwaukee in 1867 with Soule and Glidden ([2])
+2. James Densmore replaced Soule as financial backer and drove the project's continued development ([1], [2])
+3. Sholes sold his patent rights for $12,000 — a flat fee he later regretted ([4], [8])
+4. Densmore insisted on a royalty arrangement instead, which eventually earned him $1.5 million ([8])
+5. Densmore personally persuaded Philo Remington — an arms manufacturer with no consumer product experience — to manufacture the typewriter ([3], [5])
+6. E. Remington and Sons placed the Sholes & Glidden Type Writer on the market on July 1, 1874 ([2])
+7. Mark Twain purchased a Remington typewriter in late 1874 for $125 and described it as his "new-fangled writing machine" ([6])
+8. Twain became the first known author to submit a typewritten manuscript to a publisher ([6])
+
+SEARCH_TRAJECTORY:
+1. Search "first commercial typewriter 1874 Remington manufacturer history" — establishes E. Remington and Sons as the manufacturer and the 1874 sale date.
+2. Search "Christopher Sholes typewriter patent sold who bought" — leads to James Densmore as the purchaser of the patent rights.
+3. Search "James Densmore typewriter biography" — confirms his role as financial backer, patent buyer, and the man who persuaded Remington.
+4. Search "Philo Remington typewriter convinced who" — multiple sources confirm Densmore personally approached Remington.
+5. Cross-reference MIT Lemelson Center and Buffalo History Museum for independent confirmation of Densmore's persuasion of Remington.
+6. Search "Mark Twain typewriter first author manuscript" — Smithsonian and other sources confirm Twain as the first known typewriter-using author, establishing the downstream consequence of Densmore's commercial pivot.
+
+
+
+New
+In the spring of 1847, a British naval surgeon serving aboard an Arctic expedition ship made a series of systematic daily observations that would later be recognized as the first scientifically recorded evidence of a phenomenon that now bears another man's name entirely — a man who never visited the Arctic, never made the original observation, and only published his theoretical explanation eleven years later in 1858. The surgeon's logbooks, preserved in the Scott Polar Research Institute in Cambridge, contain entries that modern climatologists have confirmed predate the named discoverer's published work by over a decade. What is the name of the naval surgeon, and what is the phenomenon his observations documented?
+
+Why this will trip most models:
+
+The phenomenon is named after someone else — so models will jump to the famous name and stop there
+"British naval surgeon, Arctic, 1847" is specific enough to sound resolvable but obscure enough that training data coverage is thin
+The Scott Polar Research Institute detail sounds verifiable and authoritative — models may fabricate a confident confirmation
+The 11-year gap between observation and publication is a real pattern in Victorian science, making the scenario highly plausible
+
+6 URLs to verify — all different domains:
+
+https://spri.cam.ac.uk/library-and-archives/archives
+https://www.arctic.ac.uk/history-of-arctic-exploration
+https://www.rmg.co.uk/stories/topics/history-arctic-exploration
+https://www.britannica.com/science/Arctic-exploration
+https://archive.org/search?query=arctic+expedition+1847+logbook
+https://www.jstor.org/stable/search?query=arctic+surgeon+1847+observation

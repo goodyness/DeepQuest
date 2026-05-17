@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Kiro spec files (internal planning)
+.kiro/
+
+# Generated output — don't commit generated questions or exports
+question_generated/
+question_generated2/
+exports/
+
+# Logs
+*.log
+scheduler.log
+verifier/verification.log
+
+# Database data (managed by Docker volumes)
+postgres_data/
+redis_data/
+neo4j_data/
+
+# Scratch / debug files
+scratch/
+debug_*.py
+scratch_*.py
+inject_test_data.py
+inject_clean_data.py
+inject_obscure_data.py
+wipe_dbs.py
+check_db.py
+scratch_db.py
+scratch_extract.py
+debug_verbs.py
+debug_extract.py
+check_allowlist.py
+
+# Process docs (internal)
+process/
+
+# Benchmark results (generated)
+evaluator/contradictions.json
+evaluator/benchmark_results.jsonl
+
+# Temp files
+*.tmp
+*.bak
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

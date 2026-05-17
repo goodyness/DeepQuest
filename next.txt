@@ -1,0 +1,74 @@
+DEEP QUEST BENCHMARK QUESTIONS (V2)
+=================================
+
+QUESTION 1: The Generative AI "Bolt-on" (Corporate/AI)
+--------------------------------------------------
+PROMPT: 
+Using at least five independent sources, identify the specific entity that satisfies the following conditions:
+- It was acquired by 'DATABRICKS' in July 2023 for approximately $1.3 billion.
+- Prior to the acquisition, it released the 'MPT-7B' (MosaicML Pretrained Transformer) model in May 2023.
+
+The answer must be a real-world entity, not a webpage section, list, or UI element.
+
+SOURCES:
+1. https://www.reuters.com/technology/databricks-acquire-generative-ai-startup-mosaicml-13-bln-2023-06-26/
+2. https://www.forbes.com/sites/kenrickcai/2023/06/26/databricks-mosaicml-acquisition-1-3-billion/
+3. https://venturebeat.com/ai/databricks-to-acquire-generative-ai-startup-mosaicml-for-1-3-billion/
+4. https://news.mit.edu/2023/generative-ai-mosaicml-pretrained-transformer-0511
+5. https://thenewstack.io/mosaicml-releases-mpt-7b-a-new-standard-for-open-source-llms/
+
+ANSWER: MOSAICML
+
+--------------------------------------------------
+
+QUESTION 2: The Folk Horror Independent Release (Literature/Horror)
+--------------------------------------------------
+PROMPT: 
+Based on verifiable multi-source data from independent horror critics, identify the specific novel that satisfies the following conditions:
+- It was written by 'ADAM NEVILL' and released in late 2021.
+- It was the first full-length novel released under his own independent imprint, 'RITUAL LIMITED', following his departure from traditional publishing for his major works.
+
+SOURCES:
+1. https://kendallreviews.com/review-cunning-folk-adam-nevill/
+2. https://gingernutsofhorror.com/fiction-reviews/cunning-folk-by-adam-nevill-book-review
+3. https://www.cemeterydance.com/extras/review-cunning-folk-by-adam-nevill/
+4. https://theeloquentpage.co.uk/2021/11/01/cunning-folk-by-adam-nevill-review/
+5. http://hellnotes.com/book-review-cunning-folk/
+
+ANSWER: CUNNING FOLK
+
+--------------------------------------------------
+
+QUESTION 3: The Galactic Center Imaging (Science/Astrophysics)
+--------------------------------------------------
+PROMPT: 
+Identify the specific celestial entity that was the subject of a global scientific announcement on May 12, 2022:
+- The first-ever direct image of this entity was released by the 'EVENT HORIZON TELESCOPE (EHT)' collaboration.
+- This entity is located at the exact gravitational center of the 'MILKY WAY' galaxy.
+
+SOURCES:
+1. https://www.nature.com/articles/d41586-022-01320-y
+2. https://www.theguardian.com/science/2022/may/12/black-hole-milky-way-sagittarius-a-first-ever-image-event-horizon-telescope
+3. https://www.space.com/black-hole-milky-way-sagittarius-a-first-image-eht
+4. https://news.mit.edu/2022/first-image-black-hole-milky-way-0512
+5. https://www.cbsnews.com/news/black-hole-image-milky-way-sagittarius-a-event-horizon-telescope/
+
+ANSWER: SAGITTARIUS A* (or SGR A*)
+
+--------------------------------------------------
+
+QUESTION 4: The $20 Billion Terminated Merger (Corporate/Tech)
+--------------------------------------------------
+PROMPT: 
+Identify the specific design entity that was the subject of a massive corporate event concluded on December 18, 2023:
+- It was the target of a proposed $20 billion acquisition by 'ADOBE' announced in 2022.
+- The merger agreement was mutually terminated in late 2023 due to a lack of a clear path to regulatory approval in the UK and EU.
+
+SOURCES:
+1. https://news.adobe.com/news/news-details/2023/Adobe-and-Figma-Mutually-Agree-to-Terminate-Merger-Agreement/default.aspx
+2. https://www.axios.com/2023/12/18/adobe-figma-merger-terminated
+3. https://www.theverge.com/2023/12/18/24005828/adobe-figma-acquisition-terminated-regulatory-scrutiny
+4. https://www.cnbc.com/2023/12/18/adobe-and-figma-call-off-20-billion-merger.html
+5. https://www.reuters.com/markets/deals/adobe-figma-terminate-20-bln-merger-2023-12-18/
+
+ANSWER: FIGMA

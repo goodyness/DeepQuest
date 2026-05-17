@@ -1,0 +1,26 @@
+DEEPQUEST: TECHNICAL ARCHITECTURE & WORKFLOW
+==============================================
+
+DeepQuest is a deterministic research and relationship-mining engine designed to discover obscure, deeply buried, multi-source information from the internet and automatically generate adversarial retrieval questions. 
+
+It completely avoids generative AI "hallucinations" by strictly relying on Natural Language Processing (NLP) heuristics and Graph Theory.
+
+The system is divided into three asynchronous layers:
+
+1. THE CRAWLER WORKER (crawler/worker.py)
+-----------------------------------------
+- Objective: Rapidly download the deep web.
+- Tech Stack: Python `httpx` (async HTTP), `BeautifulSoup4` (HTML parsing), `Redis` (Queue), `PostgreSQL` (Storage).
+- How it works: It pops a URL from the Redis queue, downloads the raw HTML concurrently, extracts all new outgoing links, pushes unseen links back to Redis, and saves the raw HTML content into PostgreSQL. 
+
+2. THE SVO EXTRACTOR WORKER (extractor/worker.py)
+-----------------------------------------
+- Objective: Extract truths and build the knowledge graph.
+- Tech Stack: Python `spaCy` (NLP), `asyncpg` (Postgres driver), `Neo4j` (Graph Database).
+- How it works: It reads unprocessed HTML from PostgreSQL. Instead of searching for hardcoded keywords, it uses `spaCy` to grammatically parse English sentences and extract Subject-Verb-Object (SVO) triples. (e.g., if a text says "In 2005, StartupX acquired the unknown firm Y", it dynamically extracts `(StartupX)-[ACQUIRED]->(Firm Y)`). These deterministic facts are then pushed to Neo4j. If multiple sources report the exact same relationship, the edge weight (`occurrences` counter) is increased.
+
+3. THE QUESTION GENERATOR (generator/query_engine.py)
+-----------------------------------------
+- Objective: Find obscure, multi-hop blind spots.
+- Tech Stack: `Cypher` (Neo4j Query Language), Python.
+- How it works: It runs a complex graph traversal query looking for chained relationships (e.g. `(Entity A) -[Action 1]-> (Entity B) -[Action 2]-> (Entity C)`). It filters these paths to ensure that the sum of independent source URLs backing this exact chain is >= 6. It then mathematically formats these obscure facts into a long, adversarial search prompt where the answer is uniquely verifiable but extremely difficult to find without deep-web cross-referencing.
