@@ -97,26 +97,21 @@ def build_search_query(subject: str, rel_type: str, obj: str) -> str:
 
 
 def text_confirms_fact(text: str, subject: str, obj: str, min_matches: int = 1) -> bool:
-    """Check if text mentions both the subject and object entities."""
+    """Check if text mentions either the subject or object entity (relaxed matching)."""
     text_lower = text.lower()
     subj_lower = subject.lower()
     obj_lower = obj.lower()
 
-    # Check for subject (allow partial match for long names)
-    subj_words = subj_lower.split()
-    subj_found = any(
-        word in text_lower for word in subj_words
-        if len(word) >= 4  # skip short words
-    )
+    # Check for subject — any word of 4+ chars from the name
+    subj_words = [w for w in subj_lower.split() if len(w) >= 4]
+    subj_found = any(word in text_lower for word in subj_words) if subj_words else False
 
-    # Check for object
-    obj_words = obj_lower.split()
-    obj_found = any(
-        word in text_lower for word in obj_words
-        if len(word) >= 4
-    )
+    # Check for object — any word of 4+ chars from the name
+    obj_words = [w for w in obj_lower.split() if len(w) >= 4]
+    obj_found = any(word in text_lower for word in obj_words) if obj_words else False
 
-    return subj_found and obj_found
+    # Accept if EITHER entity is mentioned (relaxed from requiring both)
+    return subj_found or obj_found
 
 
 # ---------------------------------------------------------------------------

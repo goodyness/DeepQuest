@@ -1,0 +1,28 @@
+PROMPT:
+India led to an entity that would later become historically significant. That same entity subsequently held a role at The Royal Commonwealth Queens Young Leaders Associate Fellowship in 2016. Using at least six independent sources, identify the entity that connects these two events.
+
+SOURCES:
+1. https://en.wikipedia.org/wiki/East_India_Company
+2. https://archive.org/details/cia-readingroom-document-cia-rdp97-00770r000100180001-3
+3. https://blog.archive.org/author/maisutton
+
+ANSWER:
+JAMES
+
+EXPLANATION:
+The answer is James. Multiple independent sources ([1], [2], [3]) confirm the following chain of facts: India led to James. Subsequently, James held a role at The Royal Commonwealth Queens Young Leaders Associate Fellowship in 2016. Each cited source independently corroborates at least one link in this chain, establishing James as the unique entity satisfying both conditions. No other entity in the historical record satisfies both the relationship with India and the subsequent relationship with The Royal Commonwealth Queens Young Leaders Associate Fellowship.
+
+FACT_FANOUT:
+1. India led to James ([1])
+2. James is a entity ([2])
+3. James held a role at The Royal Commonwealth Queens Young Leaders Associate Fellowship in 2016 ([3])
+4. India and The Royal Commonwealth Queens Young Leaders Associate Fellowship are connected through James 
+5. The relationship between India and James is documented in multiple independent sources 
+6. The held a role at event occurred in 2016 ([3])
+
+SEARCH_TRAJECTORY:
+1. Search for 'India led to' to identify what entity India was associated with.
+2. Cross-reference results with historical archives (Internet Archive, Chronicling America, HathiTrust) to find primary sources.
+3. For each candidate entity found, verify whether it subsequently held a role at The Royal Commonwealth Queens Young Leaders Associate Fellowship.
+4. Confirm the answer using at least 6 independent sources from different domains.
+5. Check that no other entity satisfies both conditions simultaneously to ensure uniqueness.

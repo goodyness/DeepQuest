@@ -84,6 +84,8 @@ ALLOWLIST: set[str] = {
     "trove.nla.gov.au",               # National Library of Australia
     "paperspast.natlib.govt.nz",      # Papers Past (New Zealand)
     "eudml.org",                      # European Digital Mathematics Library
+    "digital.library.unt.edu",        # UNT Digital Library
+    "blog.archive.org",               # Internet Archive Blog
 }
 
 # ---------------------------------------------------------------------------
@@ -95,6 +97,7 @@ RATE_LIMITS: dict[str, float] = {
     "archive.org": 3.0,
     "web.archive.org": 3.0,
     "archive-it.org": 3.0,
+    "blog.archive.org": 3.0,
     # Chronicling America — government server, be conservative
     "chroniclingamerica.loc.gov": 3.0,
     # HathiTrust — rate-limited API, use longer delay
@@ -136,6 +139,8 @@ RATE_LIMITS: dict[str, float] = {
     "gallica.bnf.fr": 3.0,
     # Trove (NLA)
     "trove.nla.gov.au": 2.0,
+    # UNT Digital Library
+    "digital.library.unt.edu": 2.0,
 }
 
 

@@ -43,6 +43,9 @@ GENERIC_ENTITIES = {
     # Short/ambiguous single-word names
     "bell", "watson", "morgan", "grant", "lee", "davis",
     "mcclure", "the sec", "patent office",
+    # Known noise entities from crawler
+    "eldred", "john jackson", "new ebooks", "project gutenberg",
+    "open library", "archive", "copilot", "settings",
 }
 
 VALID_ENTITY_TYPES = {
@@ -374,10 +377,8 @@ def score_chain_quality(chain: dict) -> tuple[float, list[str]]:
     if len(normalise_name(b)) < 4:
         return 0.0, [f"Answer entity too short: '{b}'"]
 
-    # 2. Subject entity is a single common word (noise)
+    # 2. Subject entity is a single common word (noise) — but NOT historical figures
     single_word_noise = {
-        "canadian", "american", "british", "french", "german", "russian",
-        "chinese", "japanese", "spanish", "italian", "dutch", "portuguese",
         "he", "she", "they", "it", "we", "his", "her", "their", "its",
         "this", "that", "these", "those", "one", "two", "three",
         "new", "old", "first", "last", "next", "other", "same",
@@ -428,6 +429,9 @@ def score_chain_quality(chain: dict) -> tuple[float, list[str]]:
         score -= 0.1
 
     return max(0.0, min(1.0, score)), reasons
+
+
+def chain_hash(chain: dict) -> str:
     """SHA-256 hash of the chain's key fields, first 8 hex chars."""
     key = "|".join([
         chain.get('entity_a', ''),
@@ -452,6 +456,19 @@ def normalise_name(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Narrative builder
 # ---------------------------------------------------------------------------
+
+def clean_prompt(prompt: str) -> str:
+    """Clean up double 'in', 'from in', 'from document that' and leading 'In, ' ungrammaticalities."""
+    prompt = prompt.replace("In in ", "In ")
+    prompt = prompt.replace("in in ", "in ")
+    prompt = prompt.replace("from in ", "from ")
+    prompt = prompt.replace("from document that", "document that")
+    if prompt.startswith("In, "):
+        prompt = prompt[4:]
+        if prompt:
+            prompt = prompt[0].upper() + prompt[1:]
+    return prompt
+
 
 def build_narrative(chain: dict, variant_index: int) -> str | None:
     """
@@ -489,6 +506,7 @@ def build_narrative(chain: dict, variant_index: int) -> str | None:
         ).strip()
 
         prompt = re.sub(r'\ba (entity|organisation|event|invention|act)\b', r'an \1', prompt)
+        prompt = clean_prompt(prompt)
 
         if b.lower() in prompt.lower():
             return None
@@ -539,6 +557,7 @@ def build_narrative(chain: dict, variant_index: int) -> str | None:
     ).strip()
 
     prompt = re.sub(r'\ba (entity|organisation|event|invention|act)\b', r'an \1', prompt)
+    prompt = clean_prompt(prompt)
 
     if answer.lower() in prompt.lower():
         logger.debug(f"Narrative rejected — answer '{answer}' appears in prompt")
@@ -839,8 +858,8 @@ class QuestionGenerator:
     # Main generation loop
     # ------------------------------------------------------------------
 
-    def generate(self, min_year: int = None, limit: int = None, min_domains: int = 8,
-                 min_sources: int = 6, skip_verify: bool = False):
+    def generate(self, min_year: int = None, limit: int = None, min_domains: int = 3,
+                 min_sources: int = 3, skip_verify: bool = False):
         logger.info("Starting DeepQuest Generator v3...")
 
         chains = self.find_all_chains(min_domains=min_domains)
@@ -976,12 +995,12 @@ if __name__ == "__main__":
         help="Stop after writing this many output files"
     )
     parser.add_argument(
-        "--min-domains", type=int, default=8,
-        help="Minimum distinct domains required across a chain's edges (default: 8, use 1-2 for testing)"
+        "--min-domains", type=int, default=3,
+        help="Minimum distinct domains required across a chain's edges (default: 3)"
     )
     parser.add_argument(
-        "--min-sources", type=int, default=6,
-        help="Minimum verified source URLs required to publish a question (default: 6)"
+        "--min-sources", type=int, default=3,
+        help="Minimum verified source URLs required to publish a question (default: 3)"
     )
     parser.add_argument(
         "--skip-verify", action="store_true", default=False,

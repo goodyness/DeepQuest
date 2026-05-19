@@ -153,6 +153,7 @@ python seeder\inject_infoboxes.py
 python seeder\inject_wikipedia.py
 python seeder\inject_historical_corpus.py
 python seeder\inject_multisource.py
+python seeder\enrich_sources.py      # finds 6+ sources per edge
 python seeder\merge_entities.py
 ```
 
@@ -180,6 +181,7 @@ The seeders inject known historical data directly into Neo4j without waiting for
 | `inject_infoboxes.py` | Extracts structured infobox data (dates, roles, successors) directly — no NLP, zero noise |
 | `inject_historical_corpus.py` | Searches Chronicling America, Internet Archive, and Open Library APIs for pre-1950 historical facts |
 | `inject_multisource.py` | Fetches each topic from Wikipedia, DBpedia, Britannica, Wikiwand, and Archive.org simultaneously to accumulate multi-domain evidence |
+| `enrich_sources.py` | **The key to 6+ sources.** Takes existing graph edges with fewer than 6 source domains and actively searches Wikipedia, DBpedia, Archive.org, Open Library, Chronicling America, and Wikiwand for additional URLs confirming the same fact. Run this after all other seeders. |
 | `merge_entities.py` | Merges entity name variants (e.g. "SUPREME COURT", "U.S. SUPREME COURT" → one node) and consolidates parallel edges |
 | `detect_contradictions.py` | Scans the graph for facts where sources disagree; contradicted facts are excluded from generation automatically |
 

@@ -1,0 +1,28 @@
+PROMPT:
+A specific individual held a senior position at War On Germany. During their tenure, War On Germany announced Winston Tabb in 6 April 1917. Using at least six independent sources, identify this person and their role.
+
+SOURCES:
+1. https://www.loc.gov/programs/national-film-preservation-board/preservation-research/television-videotape-preservation-study/los-angeles-public-hearing
+2. https://en.wikipedia.org/wiki/World_War_I
+3. https://archive.org/details/cia-readingroom-document-cia-rdp78-01617a003700130003-4
+
+ANSWER:
+CONGRESS
+
+EXPLANATION:
+The answer is Congress. Multiple independent sources ([1], [2], [3]) confirm the following chain of facts: Winston Tabb held a role at Congress. Subsequently, Congress announced War On Germany in 6 April 1917. Each cited source independently corroborates at least one link in this chain, establishing Congress as the unique entity satisfying both conditions. No other entity in the historical record satisfies both the relationship with Winston Tabb and the subsequent relationship with War On Germany.
+
+FACT_FANOUT:
+1. Winston Tabb held a role at Congress ([1])
+2. Congress is a organisation ([2])
+3. Congress announced War On Germany in 6 April 1917 ([3])
+4. Winston Tabb and War On Germany are connected through Congress 
+5. The relationship between Winston Tabb and Congress is documented in multiple independent sources 
+6. The announced event occurred in 6 April 1917 ([3])
+
+SEARCH_TRAJECTORY:
+1. Search for 'Winston Tabb held a role at' to identify what organisation Winston Tabb was associated with.
+2. Cross-reference results with historical archives (Internet Archive, Chronicling America, HathiTrust) to find primary sources.
+3. For each candidate organisation found, verify whether it subsequently announced War On Germany.
+4. Confirm the answer using at least 6 independent sources from different domains.
+5. Check that no other organisation satisfies both conditions simultaneously to ensure uniqueness.

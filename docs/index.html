@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DeepQuest — A deterministic adversarial historical QA generation engine. Generates multi-hop benchmark questions from real web sources without any LLMs." />
+  <meta name="author" content="Adedamola Adediran" />
+  <title>DeepQuest — Deterministic Adversarial QA Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0f1117;
+      --bg-card:   #161b27;
+      --bg-card2:  #1a2035;
+      --border:    #2a3350;
+      --blue:      #63b3ed;
+      --blue-dim:  #3a7bbf;
+      --green:     #68d391;
+      --green-dim: #38a169;
+      --purple:    #b794f4;
+      --yellow:    #f6e05e;
+      --red:       #fc8181;
+      --text:      #e2e8f0;
+      --text-muted:#8892a4;
+      --text-dim:  #4a5568;
+      --radius:    12px;
+      --radius-sm: 8px;
+      --shadow:    0 4px 24px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--blue); text-decoration: none; transition: color .2s; }
+    a:hover { color: #90cdf4; }
+    img { max-width: 100%; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Utility ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 96px 0; }
+    .section-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--blue);
+      background: rgba(99,179,237,.1);
+      border: 1px solid rgba(99,179,237,.25);
+      border-radius: 20px;
+      padding: 4px 14px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin-bottom: 56px;
+    }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(15,17,23,.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow .3s;
+    }
+    #navbar.scrolled { box-shadow: 0 2px 24px rgba(0,0,0,.5); }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+    .nav-logo span { color: var(--blue); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: #0f1117;
+    }
+    .btn-primary:hover { background: #90cdf4; color: #0f1117; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,179,237,.35); }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-1px); }
+    .btn-ghost {
+      background: rgba(99,179,237,.1);
+      color: var(--blue);
+      border: 1px solid rgba(99,179,237,.2);
+    }
+    .btn-ghost:hover { background: rgba(99,179,237,.2); transform: translateY(-1px); }
+    .nav-cta { padding: 8px 18px; font-size: .8rem; }
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+      background: none;
+      border: none;
+    }
+    .hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all .3s;
+    }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 64px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,179,237,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(104,211,145,.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(42,51,80,.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42,51,80,.3) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 1; text-align: center; width: 100%; }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99,179,237,.08);
+      border: 1px solid rgba(99,179,237,.2);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--blue);
+      margin-bottom: 32px;
+      letter-spacing: .04em;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(1.3); }
+    }
+    .hero-title {
+      font-size: clamp(3.5rem, 10vw, 7rem);
+      font-weight: 900;
+      letter-spacing: -.04em;
+      line-height: 1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      font-weight: 500;
+      color: var(--blue);
+      margin-bottom: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -.01em;
+    }
+    .hero-sub {
+      font-size: clamp(.95rem, 2vw, 1.1rem);
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 64px; }
+    .hero-actions .btn { padding: 14px 28px; font-size: 1rem; }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .hero-stat-num span { color: var(--blue); }
+    .hero-stat-label { font-size: .8rem; color: var(--text-muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+    .hero-divider { width: 1px; height: 40px; background: var(--border); align-self: center; }
+
+    /* ── What is DeepQuest ── */
+    #about { background: linear-gradient(180deg, var(--bg) 0%, #111520 100%); }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .card:hover { border-color: var(--blue-dim); transform: translateY(-4px); box-shadow: var(--shadow); }
+    .card-icon {
+      width: 48px; height: 48px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+    }
+    .icon-blue { background: rgba(99,179,237,.12); }
+    .icon-green { background: rgba(104,211,145,.12); }
+    .icon-purple { background: rgba(183,148,244,.12); }
+    .icon-yellow { background: rgba(246,224,94,.12); }
+    .icon-red { background: rgba(252,129,129,.12); }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+    .card-text { font-size: .9rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── How It Works ── */
+    #how-it-works { background: #111520; }
+    .steps { display: flex; flex-direction: column; gap: 0; }
+    .step {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0 32px;
+      position: relative;
+    }
+    .step:not(:last-child) .step-line {
+      position: absolute;
+      left: 39px;
+      top: 72px;
+      bottom: -24px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--border) 0%, transparent 100%);
+    }
+    .step-num-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4px;
+    }
+    .step-num {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--blue);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      transition: border-color .2s, background .2s;
+    }
+    .step:hover .step-num { border-color: var(--blue); background: rgba(99,179,237,.1); }
+    .step-body {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      transition: border-color .2s;
+    }
+    .step:hover .step-body { border-color: var(--border); }
+    .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .step-icon { font-size: 1.3rem; }
+    .step-title { font-size: 1.05rem; font-weight: 700; }
+    .step-desc { font-size: .9rem; color: var(--text-muted); line-height: 1.65; }
+    .step-tag {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: .75rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--green);
+      background: rgba(104,211,145,.08);
+      border: 1px solid rgba(104,211,145,.2);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    /* ── Example Output ── */
+    #example { background: var(--bg); }
+    .example-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .example-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      background: var(--bg-card2);
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red { background: #fc8181; }
+    .dot-yellow { background: #f6e05e; }
+    .dot-green { background: #68d391; }
+    .example-filename {
+      margin-left: 8px;
+      font-size: .8rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+    .example-body { padding: 32px; }
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .85rem;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text);
+    }
+    .kw-label { color: var(--blue); font-weight: 700; }
+    .kw-answer { color: var(--green); font-weight: 700; }
+    .kw-sources { color: var(--purple); }
+    .kw-comment { color: var(--text-dim); }
+
+    /* ── Tech Stack ── */
+    #tech { background: #111520; }
+    .tech-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .tech-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: .875rem;
+      font-weight: 600;
+      transition: border-color .2s, transform .2s;
+      cursor: default;
+    }
+    .tech-badge:hover { border-color: var(--blue-dim); transform: translateY(-2px); }
+    .tech-badge .tech-icon { font-size: 1.2rem; }
+    .tech-badge .tech-name { color: var(--text); }
+    .tech-badge .tech-ver { color: var(--text-dim); font-size: .75rem; font-weight: 400; margin-left: 2px; }
+
+    /* ── Use Cases ── */
+    #use-cases { background: var(--bg); }
+    .usecase-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .usecase-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .usecase-card:hover { border-color: var(--blue-dim); transform: translateY(-4px); box-shadow: var(--shadow); }
+    .usecase-card:hover::before { opacity: 1; }
+    .usecase-num {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--border);
+      line-height: 1;
+      margin-bottom: 16px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .usecase-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+    .usecase-text { font-size: .9rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── Documentation ── */
+    #docs { background: #111520; }
+    .doc-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color .2s, transform .2s;
+    }
+    .doc-card:hover { border-color: var(--blue-dim); transform: translateY(-3px); }
+    .doc-card-header { display: flex; align-items: center; gap: 12px; }
+    .doc-card-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      background: rgba(99,179,237,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .doc-card-title { font-size: 1rem; font-weight: 700; }
+    .doc-card-text { font-size: .875rem; color: var(--text-muted); line-height: 1.6; }
+    .doc-card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .tag {
+      font-size: .72rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(104,211,145,.08);
+      color: var(--green);
+      border: 1px solid rgba(104,211,145,.2);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    .tag-blue {
+      background: rgba(99,179,237,.08);
+      color: var(--blue);
+      border-color: rgba(99,179,237,.2);
+    }
+    .doc-card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--blue);
+      margin-top: 4px;
+    }
+    .doc-card-link:hover { color: #90cdf4; }
+    .doc-card-link svg { transition: transform .2s; }
+    .doc-card-link:hover svg { transform: translateX(3px); }
+
+    /* ── Author ── */
+    #contact { background: var(--bg); }
+    .author-card {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .author-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue), var(--green), var(--purple));
+    }
+    .author-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue-dim), var(--green-dim));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0 auto 20px;
+      border: 3px solid var(--border);
+    }
+    .author-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .author-handle {
+      font-size: .875rem;
+      color: var(--blue);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 20px;
+    }
+    .author-bio { font-size: .95rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 32px; max-width: 420px; margin-left: auto; margin-right: auto; }
+    .author-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      background: #0a0d14;
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .footer-logo { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+    .footer-logo span { color: var(--blue); }
+    .footer-copy { font-size: .8rem; color: var(--text-dim); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      font-size: .85rem;
+      color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
+      transition: color .2s;
+    }
+    .footer-links a:hover { color: var(--blue); }
+
+    /* ── Divider ── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .grid-3 { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .hero-divider { display: none; }
+    }
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 64px; left: 0; right: 0;
+        background: rgba(15,17,23,.97);
+        border-bottom: 1px solid var(--border);
+        padding: 24px;
+        gap: 20px;
+        z-index: 999;
+      }
+      .nav-links.open a { font-size: 1rem; }
+      .hamburger { display: flex; }
+      .nav-cta { display: none; }
+      .section { padding: 64px 0; }
+      .hero-stats { gap: 24px; }
+      .step { grid-template-columns: 56px 1fr; gap: 0 16px; }
+      .step-num { width: 40px; height: 40px; font-size: .875rem; }
+      .step:not(:last-child) .step-line { left: 27px; }
+      .author-card { padding: 32px 24px; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; align-items: center; }
+      .hero-actions .btn { width: 100%; max-width: 280px; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav id="navbar">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">Deep<span>Quest</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#about">About</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#use-cases">Use Cases</a></li>
+        <li><a href="#docs">Docs</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <a href="https://github.com/goodyness/DeepQuest" target="_blank" rel="noopener" class="btn btn-primary nav-cta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        GitHub
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">No LLMs &nbsp;·&nbsp; Fully Deterministic &nbsp;·&nbsp; 6+ Verified Sources</div>
+      <h1 class="hero-title">DeepQuest</h1>
+      <p class="hero-tagline">A deterministic adversarial historical QA generation engine</p>
+      <p class="hero-sub">
+        Generates multi-hop benchmark questions from real web sources — without any large language models.
+        Every fact is extracted by NLP, corroborated by 6+ independent domains, and assembled by graph traversal.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/goodyness/DeepQuest" target="_blank" rel="noopener" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          View on GitHub
+        </a>
+        <a href="#how-it-works" class="btn btn-outline">
+          How It Works
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span>6</span>+</div>
+          <div class="hero-stat-label">Sources per fact</div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span>0</span></div>
+          <div class="hero-stat-label">LLMs used</div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span>2</span>–3</div>
+          <div class="hero-stat-label">Hop reasoning</div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span>100</span>%</div>
+          <div class="hero-stat-label">Deterministic</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ WHAT IS DEEPQUEST ══ -->
+<section id="about" class="section">
+  <div class="container">
+    <div class="section-label">What is DeepQuest</div>
+    <h2 class="section-title">Built different, by design</h2>
+    <p class="section-sub">
+      Most QA generators rely on language models to fabricate plausible-sounding questions.
+      DeepQuest does the opposite — it mines real facts from the web, verifies them across independent sources,
+      and constructs questions that are provably answerable.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon icon-blue">🚫</div>
+        <div class="card-title">No LLMs</div>
+        <div class="card-text">
+          Entirely deterministic. No generative AI at any stage of the pipeline.
+          Facts are extracted by spaCy NLP, not hallucinated by a language model.
+          The same input always produces the same output.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon icon-green">🔗</div>
+        <div class="card-title">6+ Verified Sources</div>
+        <div class="card-text">
+          Every question requires corroboration from 6 or more independent web domains
+          before it is accepted into the dataset. A fact that only one source reports
+          never makes it through.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon icon-purple">🧠</div>
+        <div class="card-title">Multi-Hop Reasoning</div>
+        <div class="card-text">
+          Questions require chaining 2–3 facts across independent sources — designed
+          to defeat single-source lookup and expose weaknesses in RAG pipelines and
+          AI retrieval systems.
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div style="margin-top: 56px; overflow-x: auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.875rem;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:14px 20px; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border); background:var(--bg-card2); border-radius:8px 0 0 0;">Feature</th>
+            <th style="text-align:center; padding:14px 20px; color:var(--blue); font-weight:700; border-bottom:1px solid var(--border); background:var(--bg-card2);">DeepQuest</th>
+            <th style="text-align:center; padding:14px 20px; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border); background:var(--bg-card2); border-radius:0 8px 0 0;">LLM-based generators</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px 20px; color:var(--text-muted); background:var(--bg-card);">Uses generative AI</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--green); font-weight:700; background:var(--bg-card);">✗ Never</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--red); background:var(--bg-card);">✓ Always</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px 20px; color:var(--text-muted); background:var(--bg-card2);">Deterministic output</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--green); font-weight:700; background:var(--bg-card2);">✓ Yes</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--red); background:var(--bg-card2);">✗ No</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px 20px; color:var(--text-muted); background:var(--bg-card);">Source verification</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--green); font-weight:700; background:var(--bg-card);">✓ 6+ domains required</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--red); background:var(--bg-card);">✗ Unverified</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px 20px; color:var(--text-muted); background:var(--bg-card2);">Hallucination risk</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--green); font-weight:700; background:var(--bg-card2);">✗ None</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--red); background:var(--bg-card2);">✓ High</td>
+          </tr>
+          <tr>
+            <td style="padding:14px 20px; color:var(--text-muted); background:var(--bg-card);">Reproducible answers</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--green); font-weight:700; background:var(--bg-card);">✓ Yes</td>
+            <td style="padding:14px 20px; text-align:center; color:var(--red); background:var(--bg-card);">✗ No</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ HOW IT WORKS ══ -->
+<section id="how-it-works" class="section">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">A 6-step deterministic pipeline</h2>
+    <p class="section-sub">
+      Every question DeepQuest produces has passed through the same rigorous pipeline —
+      from raw web crawl to verified, multi-hop adversarial prompt.
+    </p>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">1</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">🕷️</span>
+            <span class="step-title">Deep Crawling</span>
+          </div>
+          <p class="step-desc">
+            An async HTTP crawler (httpx + trafilatura) recursively fetches pages from historical archives,
+            newspaper digitisation projects, regulatory filings, and regional journalism sources.
+            Raw HTML is stored in PostgreSQL for downstream processing.
+          </p>
+          <span class="step-tag">crawler/worker.py</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">2</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">🔬</span>
+            <span class="step-title">NLP Extraction</span>
+          </div>
+          <p class="step-desc">
+            spaCy (<code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--blue)">en_core_web_lg</code>)
+            parses each page and extracts Subject-Verb-Object triples deterministically.
+            No probabilistic generation — the same text always yields the same triples.
+          </p>
+          <span class="step-tag">extractor/worker.py</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">3</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">🕸️</span>
+            <span class="step-title">Knowledge Graph</span>
+          </div>
+          <p class="step-desc">
+            Extracted triples are pushed into Neo4j. When multiple independent sources report the same
+            relationship, the edge's domain count increases. Only edges with sufficient multi-domain
+            support are eligible for question generation.
+          </p>
+          <span class="step-tag">graph/schema.py</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">4</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">🔍</span>
+            <span class="step-title">Source Enrichment</span>
+          </div>
+          <p class="step-desc">
+            For each graph edge, the enricher actively searches Wikipedia, DBpedia, Archive.org,
+            Open Library, Chronicling America, and Wikiwand to accumulate 6+ independent URLs
+            confirming the same fact. Edges that cannot reach the threshold are excluded.
+          </p>
+          <span class="step-tag">seeder/enrich_sources.py</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">5</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">⚠️</span>
+            <span class="step-title">Contradiction Detection</span>
+          </div>
+          <p class="step-desc">
+            The contradiction detector scans the graph for facts where sources disagree —
+            conflicting dates, disputed attributions, or contradictory outcomes.
+            Any disputed fact is flagged and automatically excluded from generation.
+          </p>
+          <span class="step-tag">seeder/detect_contradictions.py</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num-wrap">
+          <div class="step-num">6</div>
+        </div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="step-icon">✍️</span>
+            <span class="step-title">Question Generation</span>
+          </div>
+          <p class="step-desc">
+            Rule-based templates traverse verified multi-hop graph chains and build adversarial
+            narrative prompts. No LLM is involved. The output includes the prompt, answer,
+            source URLs, explanation, fact fanout, and a search trajectory.
+          </p>
+          <span class="step-tag">generator/query_engine.py</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ EXAMPLE OUTPUT ══ -->
+<section id="example" class="section">
+  <div class="container">
+    <div class="section-label">Example Output</div>
+    <h2 class="section-title">What a DeepQuest question looks like</h2>
+    <p class="section-sub">
+      Each generated question is a structured adversarial prompt with a unique, verifiable answer
+      backed by 6+ independent sources.
+    </p>
+    <div class="example-wrap">
+      <div class="example-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <span class="example-filename">question_20260517_202141_a4c46c7e_1870.txt</span>
+      </div>
+      <div class="example-body">
+        <pre><span class="kw-label">PROMPT:</span>
+In 1870, a businessman founded an oil company that would go on to control
+approximately 90% of U.S. oil refining within a decade. That company was
+subsequently dissolved by a landmark Supreme Court ruling in 1911.
+Using at least six independent sources, identify the company.
+
+<span class="kw-label">ANSWER:</span> <span class="kw-answer">STANDARD OIL</span>
+
+<span class="kw-label">SOURCES:</span> <span class="kw-sources">6 independent domains verified</span>
+<span class="kw-comment">  1. en.wikipedia.org/wiki/Standard_Oil
+  2. britannica.com/topic/Standard-Oil-Company-and-Trust
+  3. archive.org/details/standardoilcompany
+  4. chroniclingamerica.loc.gov/...
+  5. dbpedia.org/resource/Standard_Oil
+  6. history.com/topics/industrial-revolution/standard-oil</span>
+
+<span class="kw-label">EXPLANATION:</span>
+The answer is Standard Oil. Multiple independent sources confirm the following
+chain of facts: John D. Rockefeller → FOUNDED → Standard Oil (1870) →
+CONTROLLED → ~90% U.S. oil refining → DISSOLVED BY → Supreme Court (1911).
+Each cited source independently corroborates at least one link in this chain.
+
+<span class="kw-label">SEARCH_TRAJECTORY:</span>
+  1. Search for 'oil company founded 1870 controlled refining' to identify candidates.
+  2. Cross-reference with historical archives (Internet Archive, Chronicling America).
+  3. Verify the 1911 Supreme Court dissolution against legal databases.
+  4. Confirm using at least 6 independent sources from different domains.
+  5. Check that no other entity satisfies both conditions to ensure uniqueness.</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ TECH STACK ══ -->
+<section id="tech" class="section">
+  <div class="container">
+    <div class="section-label">Tech Stack</div>
+    <h2 class="section-title">Built on proven open-source tools</h2>
+    <p class="section-sub">
+      Every component was chosen for reliability, performance, and determinism.
+      No proprietary APIs. No black boxes.
+    </p>
+    <div class="tech-grid">
+      <div class="tech-badge">
+        <span class="tech-icon">🐍</span>
+        <span class="tech-name">Python<span class="tech-ver">3.11+</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🔤</span>
+        <span class="tech-name">spaCy<span class="tech-ver">en_core_web_lg</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🕸️</span>
+        <span class="tech-name">Neo4j<span class="tech-ver">5</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🐘</span>
+        <span class="tech-name">PostgreSQL<span class="tech-ver">15</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">⚡</span>
+        <span class="tech-name">Redis<span class="tech-ver">7</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🌐</span>
+        <span class="tech-name">httpx<span class="tech-ver">async</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">📄</span>
+        <span class="tech-name">trafilatura</span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🌶️</span>
+        <span class="tech-name">Flask<span class="tech-ver">dashboard</span></span>
+      </div>
+      <div class="tech-badge">
+        <span class="tech-icon">🐳</span>
+        <span class="tech-name">Docker<span class="tech-ver">Compose</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ USE CASES ══ -->
+<section id="use-cases" class="section">
+  <div class="container">
+    <div class="section-label">Use Cases</div>
+    <h2 class="section-title">What you can do with DeepQuest</h2>
+    <p class="section-sub">
+      DeepQuest produces datasets purpose-built to stress-test AI systems in ways
+      that synthetic or LLM-generated benchmarks simply cannot.
+    </p>
+    <div class="grid-3">
+      <div class="usecase-card">
+        <div class="usecase-num">01</div>
+        <div class="usecase-title">RAG Benchmark Testing</div>
+        <div class="usecase-text">
+          Test retrieval-augmented generation systems against questions that require
+          multi-source reasoning. Single-document retrieval will fail — by design.
+          Expose gaps in your pipeline before they reach production.
+        </div>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-num">02</div>
+        <div class="usecase-title">AI Hallucination Research</div>
+        <div class="usecase-text">
+          Questions are engineered to expose when AI systems fabricate answers.
+          Because every correct answer is uniquely verifiable, any deviation is
+          a measurable hallucination — not an ambiguous edge case.
+        </div>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-num">03</div>
+        <div class="usecase-title">Historical QA Datasets</div>
+        <div class="usecase-text">
+          Build high-quality, verifiable datasets for academic research. Export to
+          HuggingFace JSONL, SQuAD v2, HotpotQA, JSON, or CSV — ready to drop
+          into your training or evaluation pipeline.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ DOCUMENTATION ══ -->
+<section id="docs" class="section">
+  <div class="container">
+    <div class="section-label">Documentation</div>
+    <h2 class="section-title">Everything you need to get started</h2>
+    <p class="section-sub">
+      Full documentation lives in the repository. Below are the key references.
+    </p>
+    <div class="grid-2">
+
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">🚀</div>
+          <div class="doc-card-title">Quick Start Guide</div>
+        </div>
+        <div class="doc-card-text">
+          Clone the repo, spin up Docker Compose, install dependencies, and run your first
+          question generation in under 10 minutes. Covers prerequisites, environment setup,
+          and the full pipeline from crawler to output.
+        </div>
+        <a href="https://github.com/goodyness/DeepQuest#quick-start" target="_blank" rel="noopener" class="doc-card-link">
+          Read on GitHub
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">📋</div>
+          <div class="doc-card-title">How to Run</div>
+        </div>
+        <div class="doc-card-text">
+          Step-by-step instructions for running each component — crawler, extractor, seeders,
+          generator, and dashboard. Includes testing mode (relaxed thresholds) and production
+          mode (full 6-source gate with live verification).
+        </div>
+        <a href="https://github.com/goodyness/DeepQuest/blob/main/how_to.md" target="_blank" rel="noopener" class="doc-card-link">
+          View how_to.md
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">🌱</div>
+          <div class="doc-card-title">Seeder Tools</div>
+        </div>
+        <div class="doc-card-text">
+          Bootstrap the knowledge graph without waiting for the crawler. Seven specialised
+          seeders inject data from Wikipedia, DBpedia, Britannica, Chronicling America,
+          Internet Archive, and Open Library simultaneously.
+        </div>
+        <div class="doc-card-tags">
+          <span class="tag">inject_wikipedia.py</span>
+          <span class="tag">inject_infoboxes.py</span>
+          <span class="tag">enrich_sources.py</span>
+          <span class="tag">merge_entities.py</span>
+        </div>
+        <a href="https://github.com/goodyness/DeepQuest#seeder-tools" target="_blank" rel="noopener" class="doc-card-link">
+          View seeder docs
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">📦</div>
+          <div class="doc-card-title">API &amp; Export Formats</div>
+        </div>
+        <div class="doc-card-text">
+          Export your generated questions to any format your pipeline needs.
+          Run <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--blue)">python evaluator/export.py</code>
+          to produce all formats simultaneously.
+        </div>
+        <div class="doc-card-tags">
+          <span class="tag tag-blue">JSON</span>
+          <span class="tag tag-blue">CSV</span>
+          <span class="tag tag-blue">HuggingFace JSONL</span>
+          <span class="tag tag-blue">SQuAD v2</span>
+          <span class="tag tag-blue">HotpotQA</span>
+          <span class="tag tag-blue">Markdown</span>
+        </div>
+        <a href="https://github.com/goodyness/DeepQuest#output-format" target="_blank" rel="noopener" class="doc-card-link">
+          View export docs
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══ AUTHOR ══ -->
+<section id="contact" class="section">
+  <div class="container">
+    <div class="section-label">About the Author</div>
+    <h2 class="section-title" style="text-align:center; margin-bottom:48px;">The person behind DeepQuest</h2>
+    <div class="author-card">
+      <div class="author-avatar">AA</div>
+      <div class="author-name">Adedamola Adediran</div>
+      <div class="author-handle">@goodyness</div>
+      <p class="author-bio">
+        Builder of deterministic AI research tools. Interested in AI evaluation,
+        knowledge graphs, and adversarial benchmarking. DeepQuest is a research
+        project exploring what rigorous, verifiable QA generation looks like
+        when you remove the language model entirely.
+      </p>
+      <div class="author-actions">
+        <a href="https://linkedin.com/in/adediranadedamola" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </a>
+        <a href="https://github.com/goodyness" target="_blank" rel="noopener" class="btn btn-outline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+        <a href="https://github.com/goodyness/DeepQuest" target="_blank" rel="noopener" class="btn btn-primary">
+          View DeepQuest
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-logo">Deep<span>Quest</span></div>
+        <div class="footer-copy" style="margin-top:6px;">© 2026 Adedamola Adediran. All Rights Reserved.</div>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/goodyness/DeepQuest" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+        <a href="https://linkedin.com/in/adediranadedamola" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ══ JS ══ -->
+<script>
+  // Navbar scroll shadow
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+
+  // Mobile hamburger
+  const hamburger = document.getElementById('hamburger');
+  const navLinks  = document.getElementById('navLinks');
+  hamburger.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+  });
+  // Close on link click
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => navLinks.classList.remove('open'));
+  });
+
+  // Intersection observer — fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.card, .step-body, .usecase-card, .doc-card, .tech-badge, .author-card, .example-wrap').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity .5s ease, transform .5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>

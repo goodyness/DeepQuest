@@ -1,0 +1,27 @@
+PROMPT:
+A chain of events beginning with J. P. Morgan ultimately led to The Rough Riders. Using at least six independent sources, identify the pivotal intermediary that connected these two outcomes.
+
+SOURCES:
+1. https://en.wikipedia.org/wiki/Theodore_Roosevelt
+2. https://archive.org/details/cia-readingroom-document-cia-rdp89g00643r001000100012-2
+3. https://www.history.com/topics/theodore-roosevelt
+
+ANSWER:
+ROOSEVELT
+
+EXPLANATION:
+The answer is Roosevelt. Multiple independent sources ([1], [2], [3]) confirm the following chain of facts: J. P. Morgan led to Roosevelt. Subsequently, Roosevelt led The Rough Riders. Each cited source independently corroborates at least one link in this chain, establishing Roosevelt as the unique entity satisfying both conditions. No other entity in the historical record satisfies both the relationship with J. P. Morgan and the subsequent relationship with The Rough Riders.
+
+FACT_FANOUT:
+1. J. P. Morgan led to Roosevelt ([1])
+2. Roosevelt is a entity ([2])
+3. Roosevelt led The Rough Riders ([3])
+4. J. P. Morgan and The Rough Riders are connected through Roosevelt 
+5. The relationship between J. P. Morgan and Roosevelt is documented in multiple independent sources 
+
+SEARCH_TRAJECTORY:
+1. Search for 'J. P. Morgan led to' to identify what entity J. P. Morgan was associated with.
+2. Cross-reference results with historical archives (Internet Archive, Chronicling America, HathiTrust) to find primary sources.
+3. For each candidate entity found, verify whether it subsequently led The Rough Riders.
+4. Confirm the answer using at least 6 independent sources from different domains.
+5. Check that no other entity satisfies both conditions simultaneously to ensure uniqueness.

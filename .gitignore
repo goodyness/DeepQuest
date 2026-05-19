@@ -34,6 +34,9 @@ ENV/
 # Generated output — don't commit generated questions or exports
 question_generated/
 question_generated2/
+question_generated3/
+question_generated4/
+question_generated5/
 exports/
 
 # Logs

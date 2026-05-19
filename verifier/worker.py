@@ -7,6 +7,7 @@ fact before a question is accepted.
 Requirements: 7 (Source Verifier Component), 15 (Operational Observability)
 """
 
+import hashlib
 import json
 import os
 import time
@@ -143,8 +144,12 @@ class SourceVerifier:
             # proceed with question
     """
 
-    def __init__(self, timeout_seconds: int = 120):
+    def __init__(self, timeout_seconds: int = 120, cache_enabled: bool = True, cache_dir: str = ".verifier_cache"):
         self.timeout_seconds = timeout_seconds
+        self.cache_enabled = cache_enabled
+        self.cache_dir = cache_dir
+        if self.cache_enabled:
+            os.makedirs(self.cache_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Public API
@@ -244,6 +249,20 @@ class SourceVerifier:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _save_to_cache(self, cache_path: str, url: str, status_code: int, body_text: str) -> None:
+        """Helper to write fetched pages and status codes to filesystem cache."""
+        if self.cache_enabled:
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "url": url,
+                        "status_code": status_code,
+                        "body_text": body_text,
+                        "cached_at": time.time()
+                    }, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
     def _fetch_and_check(self, url: str, key_terms: list) -> URLResult:
         """
         Fetch *url*, extract body text via trafilatura, and check key terms.
@@ -260,20 +279,67 @@ class SourceVerifier:
         URLResult
         """
         start = time.monotonic()
+
+        # 1. Cache Lookup
+        url_hash = hashlib.sha256(url.encode('utf-8', errors='ignore')).hexdigest()
+        cache_path = os.path.join(self.cache_dir, f"{url_hash}.json")
+
+        body_text = None
+        status_code = 0
+        if self.cache_enabled:
+            try:
+                if os.path.exists(cache_path):
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        cached_data = json.load(f)
+                    body_text = cached_data.get("body_text", "")
+                    status_code = cached_data.get("status_code", 200)
+            except Exception:
+                pass
+
+        if body_text is not None:
+            word_count = len(body_text.split())
+            if word_count < 100 or status_code != 200:
+                elapsed = time.monotonic() - start
+                return URLResult(
+                    url=url,
+                    status_code=status_code,
+                    word_count=word_count,
+                    matched_terms=[],
+                    verified=False,
+                    elapsed_seconds=round(elapsed, 4),
+                )
+            matched_terms = _match_key_terms(body_text, key_terms)
+            verified = len(matched_terms) >= 2
+            elapsed = time.monotonic() - start
+            return URLResult(
+                url=url,
+                status_code=status_code,
+                word_count=word_count,
+                matched_terms=matched_terms,
+                verified=verified,
+                elapsed_seconds=round(elapsed, 4),
+            )
+
+        # 2. Network Fetch (Cache Miss)
         status_code = 0
         word_count = 0
-        matched_terms: list = []
+        matched_terms = []
         verified = False
 
         try:
+            headers = {
+                "User-Agent": "DeepQuestBot/1.0"
+            }
             with httpx.Client(
                 timeout=_REQUEST_TIMEOUT,
                 follow_redirects=True,
+                headers=headers,
             ) as client:
                 response = client.get(url)
                 status_code = response.status_code
 
                 if status_code != 200:
+                    self._save_to_cache(cache_path, url, status_code, "")
                     elapsed = time.monotonic() - start
                     return URLResult(
                         url=url,
@@ -287,6 +353,7 @@ class SourceVerifier:
                 raw_html = response.text
 
         except Exception:
+            self._save_to_cache(cache_path, url, 0, "")
             elapsed = time.monotonic() - start
             return URLResult(
                 url=url,
@@ -307,6 +374,9 @@ class SourceVerifier:
         ) or ""
 
         word_count = len(body_text.split())
+
+        # 3. Cache Save
+        self._save_to_cache(cache_path, url, status_code, body_text)
 
         if word_count < 100:
             elapsed = time.monotonic() - start

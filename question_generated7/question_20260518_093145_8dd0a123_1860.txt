@@ -1,0 +1,28 @@
+PROMPT:
+John Jackson held a role at a company that would later become historically significant. That same company subsequently held a role at Antislavery Republican Party in 1860. Using at least six independent sources, identify the company that connects these two events.
+
+SOURCES:
+1. https://en.wikipedia.org/wiki/Benjamin_Disraeli
+2. https://archive.org/details/forrecorddocumen0002shid_q1x1
+3. https://www.britannica.com/topic/american-civil-war
+
+ANSWER:
+ABRAHAM LINCOLN
+
+EXPLANATION:
+The answer is Abraham Lincoln. Multiple independent sources ([1], [2], [3]) confirm the following chain of facts: John Jackson held a role at Abraham Lincoln. Subsequently, Abraham Lincoln held a role at Antislavery Republican Party in 1860. Each cited source independently corroborates at least one link in this chain, establishing Abraham Lincoln as the unique entity satisfying both conditions. No other entity in the historical record satisfies both the relationship with John Jackson and the subsequent relationship with Antislavery Republican Party.
+
+FACT_FANOUT:
+1. John Jackson held a role at Abraham Lincoln ([1])
+2. Abraham Lincoln is a company ([2])
+3. Abraham Lincoln held a role at Antislavery Republican Party in 1860 ([3])
+4. John Jackson and Antislavery Republican Party are connected through Abraham Lincoln 
+5. The relationship between John Jackson and Abraham Lincoln is documented in multiple independent sources 
+6. The held a role at event occurred in 1860 ([3])
+
+SEARCH_TRAJECTORY:
+1. Search for 'John Jackson held a role at' to identify what company John Jackson was associated with.
+2. Cross-reference results with historical archives (Internet Archive, Chronicling America, HathiTrust) to find primary sources.
+3. For each candidate company found, verify whether it subsequently held a role at Antislavery Republican Party.
+4. Confirm the answer using at least 6 independent sources from different domains.
+5. Check that no other company satisfies both conditions simultaneously to ensure uniqueness.
