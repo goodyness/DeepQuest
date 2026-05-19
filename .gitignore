@@ -32,12 +32,11 @@ ENV/
 .kiro/
 
 # Generated output — don't commit generated questions or exports
-question_generated/
-question_generated2/
-question_generated3/
-question_generated4/
-question_generated5/
+question_generated*/
 exports/
+
+# Verifier cache
+.verifier_cache/
 
 # Logs
 *.log
