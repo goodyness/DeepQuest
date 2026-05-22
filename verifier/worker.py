@@ -155,7 +155,9 @@ class SourceVerifier:
     # Public API
     # ------------------------------------------------------------------
 
-    def verify(self, source_urls: list, key_terms: list) -> VerificationResult:
+    def verify(self, source_urls: list, key_terms: list,
+               required_terms: list | None = None,
+               min_sources: int = 6) -> VerificationResult:
         """
         Fetch and check all *source_urls* concurrently, enforcing a global
         *timeout_seconds* deadline.
@@ -167,6 +169,9 @@ class SourceVerifier:
         key_terms : list[str]
             Terms derived from the answer chain (entity names, relationship
             verbs, date strings).
+        required_terms : list[str] | None
+            If provided, every term in this list must appear in a URL's matched
+            terms for that URL to be verified. Typically the answer entity name.
 
         Returns
         -------
@@ -180,7 +185,7 @@ class SourceVerifier:
         with ThreadPoolExecutor() as executor:
             # Submit all URL checks
             future_to_url = {
-                executor.submit(self._fetch_and_check, url, key_terms): url
+                executor.submit(self._fetch_and_check, url, key_terms, required_terms): url
                 for url in source_urls
             }
 
@@ -231,11 +236,10 @@ class SourceVerifier:
                         except Exception:
                             pass
 
-        # 6-domain gate
         unique_domains = VerificationResult.unique_domains(verified_urls)
         passed = (
-            len(verified_urls) >= 6
-            and len(unique_domains) >= 6
+            len(verified_urls) >= min_sources
+            and len(unique_domains) >= min_sources
         )
 
         return VerificationResult(
@@ -263,7 +267,8 @@ class SourceVerifier:
             except Exception:
                 pass
 
-    def _fetch_and_check(self, url: str, key_terms: list) -> URLResult:
+    def _fetch_and_check(self, url: str, key_terms: list,
+                         required_terms: list | None = None) -> URLResult:
         """
         Fetch *url*, extract body text via trafilatura, and check key terms.
 
@@ -273,6 +278,9 @@ class SourceVerifier:
             The URL to fetch.
         key_terms : list[str]
             Terms to search for in the extracted body text.
+        required_terms : list[str] | None
+            If provided, every term in this list must be present in the matched
+            terms for the URL to be marked verified.
 
         Returns
         -------

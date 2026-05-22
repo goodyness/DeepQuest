@@ -1,5 +1,11 @@
 import logging
+import os
+import sys
+
 from neo4j import GraphDatabase
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from lib.source_utils import normalize_netloc
 
 logger = logging.getLogger("DeepQuest_Graph")
 
@@ -37,6 +43,7 @@ class GraphManager:
             "r.date = coalesce(r.date, $date) "
             "RETURN r"
         )
+        domain = normalize_netloc(source_url) or (domain or "").lower()
         tx.run(query, subject=subject.strip().upper(), object=object_.strip().upper(), source_url=source_url, domain=domain, context=context, date=date)
 
     def create_role_relation(self, tx, person, role_title, org, source_url, domain, date=None):
@@ -64,6 +71,7 @@ class GraphManager:
             "r.occurrences = r.occurrences + 1 "
             "RETURN r"
         )
+        domain = normalize_netloc(source_url) or (domain or "").lower()
         tx.run(
             query,
             person=person.strip().upper(),
@@ -98,6 +106,7 @@ class GraphManager:
             "r.occurrences = r.occurrences + 1 "
             "RETURN r"
         )
+        domain = normalize_netloc(source_url) or (domain or "").lower()
         tx.run(
             query,
             cause=cause.strip().upper(),

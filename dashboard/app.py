@@ -215,13 +215,13 @@ DASHBOARD_HTML = """
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
                 <div>
                     <label style="font-size: 12px; color: #718096;">Min Domains</label>
-                    <input type="number" id="min-domains" value="1" min="1" max="8"
+                    <input type="number" id="min-domains" value="6" min="1" max="8"
                            style="width: 60px; margin-left: 8px; background: #0f1117; border: 1px solid #2d3748;
                                   color: #e2e8f0; padding: 4px 8px; border-radius: 4px;">
                 </div>
                 <div>
                     <label style="font-size: 12px; color: #718096;">Min Sources</label>
-                    <input type="number" id="min-sources" value="1" min="1" max="6"
+                    <input type="number" id="min-sources" value="6" min="1" max="6"
                            style="width: 60px; margin-left: 8px; background: #0f1117; border: 1px solid #2d3748;
                                   color: #e2e8f0; padding: 4px 8px; border-radius: 4px;">
                 </div>
@@ -595,9 +595,12 @@ def api_run():
 
     command_map = {
         'inject_infoboxes':   [python, 'seeder/inject_infoboxes.py'],
-        'inject_wikipedia':   [python, 'seeder/inject_wikipedia.py'],
+        'inject_wikipedia':   [python, 'seeder/inject_wikipedia.py',
+                               '--topics-file', 'seeder/topics.txt', '--limit', '15'],
         'inject_corpus':      [python, 'seeder/inject_historical_corpus.py', '--limit', '20'],
-        'inject_multisource': [python, 'seeder/inject_multisource.py', '--limit', '10'],
+        'inject_multisource': [python, 'seeder/inject_multisource.py',
+                               '--topics-file', 'seeder/topics.txt', '--limit', '10'],
+        'enrich_sources':     [python, 'seeder/enrich_sources.py', '--limit', '50'],
         'merge_entities':     [python, 'seeder/merge_entities.py'],
         'detect_contradictions': [python, 'seeder/detect_contradictions.py'],
         'export':             [python, 'evaluator/export.py'],
@@ -606,8 +609,8 @@ def api_run():
 
     if cmd == 'generate':
         args = [python, 'generator/query_engine.py',
-                '--min-domains', str(data.get('min_domains', 1)),
-                '--min-sources', str(data.get('min_sources', 1))]
+                '--min-domains', str(data.get('min_domains', 6)),
+                '--min-sources', str(data.get('min_sources', 6))]
         if data.get('skip_verify'):
             args.append('--skip-verify')
         if data.get('min_year'):

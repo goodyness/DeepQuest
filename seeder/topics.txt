@@ -1,0 +1,57 @@
+# DeepQuest topics — one per line (any domain)
+# Lines starting with # are ignored. Use spaces or underscores in titles.
+# Examples: Python (programming), CRISPR, Los Angeles Lakers
+#
+# Edit this file, then run:
+#   python seeder/inject_multisource.py
+#   python seeder/inject_wikipedia.py
+#   python seeder/enrich_sources.py --limit 200
+
+# --- History / business ---
+Standard_Oil
+Andrew_Carnegie
+J._P._Morgan
+Federal_Reserve
+Sherman_Antitrust_Act
+Industrial_Revolution
+
+# --- Science / medicine ---
+Marie_Curie
+Charles_Darwin
+CRISPR
+Penicillin
+Theory_of_relativity
+Human_Genome_Project
+
+# --- Technology / computing ---
+IBM
+Microsoft
+Apple_Inc.
+World_Wide_Web
+Linux
+OpenAI
+
+# --- Sports ---
+FIFA_World_Cup
+National_Basketball_Association
+Super_Bowl
+Olympic_Games
+UEFA_Champions_League
+
+# --- Geography / institutions ---
+United_Nations
+European_Union
+World_Bank
+NASA
+CERN
+
+# --- Culture / arts ---
+William_Shakespeare
+Mona_Lisa
+Hollywood
+Nobel_Prize
+
+# --- Law / politics (modern) ---
+Universal_Declaration_of_Human_Rights
+Paris_Agreement
+Brexit

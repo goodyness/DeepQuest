@@ -11,8 +11,9 @@ waiting weeks for the crawler to accumulate enough data.
 
 Usage:
     python seeder/inject_wikipedia.py
+    python seeder/inject_wikipedia.py --topics-file seeder/topics.txt
     python seeder/inject_wikipedia.py --topics "Standard Oil" "French Revolution"
-    python seeder/inject_wikipedia.py --list-file seeder/topics.txt
+    python seeder/inject_wikipedia.py --list-file seeder/topics.txt  # alias for --topics-file
 """
 
 import argparse
@@ -29,6 +30,7 @@ import httpx
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from extractor.worker import extract_all, clean_html
 from graph.schema import GraphManager
+from lib.topics import add_topics_file_argument, resolve_topics
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("DeepQuest_Seeder")
@@ -311,9 +313,10 @@ def main():
         "--topics", nargs="+", default=None,
         help="Specific Wikipedia article titles to inject (use underscores for spaces)"
     )
+    add_topics_file_argument(parser, default=None)
     parser.add_argument(
         "--list-file", type=str, default=None,
-        help="Path to a text file with one Wikipedia title per line"
+        help="Alias for --topics-file (backward compatible)",
     )
     parser.add_argument(
         "--limit", type=int, default=None,
@@ -321,17 +324,16 @@ def main():
     )
     args = parser.parse_args()
 
-    # Determine topic list
-    if args.list_file:
-        with open(args.list_file, 'r', encoding='utf-8') as f:
-            topics = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-    elif args.topics:
-        topics = args.topics
-    else:
-        topics = DEFAULT_TOPICS
-
-    if args.limit:
-        topics = topics[:args.limit]
+    topics_file = args.topics_file or args.list_file
+    topics = resolve_topics(
+        cli_topics=args.topics,
+        topics_file=topics_file,
+        default_topics=DEFAULT_TOPICS,
+        limit=args.limit,
+    )
+    if not topics:
+        logger.error("No topics to process. Add lines to seeder/topics.txt or pass --topics.")
+        sys.exit(1)
 
     asyncio.run(run_injection(topics))
 

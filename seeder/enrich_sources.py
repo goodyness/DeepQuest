@@ -39,9 +39,11 @@ import sys
 import time
 
 import httpx
+from urllib.parse import urlparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from graph.schema import GraphManager
+from lib.source_utils import count_unique_domains, normalize_netloc
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("DeepQuest_SourceEnricher")
@@ -96,21 +98,22 @@ def build_search_query(subject: str, rel_type: str, obj: str) -> str:
     return query
 
 
-def text_confirms_fact(text: str, subject: str, obj: str, min_matches: int = 1) -> bool:
-    """Check if text mentions either the subject or object entity (relaxed matching)."""
+def text_confirms_fact(
+    text: str, subject: str, obj: str, strict: bool = False
+) -> bool:
+    """Check if text mentions subject/object. strict=True requires both entities."""
     text_lower = text.lower()
     subj_lower = subject.lower()
     obj_lower = obj.lower()
 
-    # Check for subject — any word of 4+ chars from the name
     subj_words = [w for w in subj_lower.split() if len(w) >= 4]
     subj_found = any(word in text_lower for word in subj_words) if subj_words else False
 
-    # Check for object — any word of 4+ chars from the name
     obj_words = [w for w in obj_lower.split() if len(w) >= 4]
     obj_found = any(word in text_lower for word in obj_words) if obj_words else False
 
-    # Accept if EITHER entity is mentioned (relaxed from requiring both)
+    if strict:
+        return subj_found and obj_found
     return subj_found or obj_found
 
 
@@ -252,15 +255,60 @@ async def search_chronicling_america(query: str, subject: str, obj: str,
     return urls
 
 
+async def search_simple_wikipedia(query: str, subject: str, obj: str,
+                                   client: httpx.AsyncClient, strict: bool) -> list[str]:
+    """Simple English Wikipedia — distinct domain from en.wikipedia.org."""
+    urls = []
+    params = {
+        "action": "query",
+        "list": "search",
+        "srsearch": query,
+        "srlimit": 2,
+        "format": "json",
+    }
+    try:
+        r = await client.get(
+            "https://simple.wikipedia.org/w/api.php", params=params, timeout=15
+        )
+        if r.status_code == 200:
+            for result in r.json().get("query", {}).get("search", []):
+                title = result.get("title", "")
+                snippet = result.get("snippet", "")
+                if text_confirms_fact(snippet, subject, obj, strict=strict):
+                    urls.append(
+                        f"https://simple.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                    )
+    except Exception as e:
+        logger.debug(f"Simple Wikipedia search failed: {e}")
+    return urls
+
+
+async def search_wikidata(subject: str, obj: str,
+                          client: httpx.AsyncClient, strict: bool) -> list[str]:
+    """Wikidata entity page for the subject (another independent domain)."""
+    urls = []
+    resource = subject.replace(" ", "_")
+    try:
+        r = await client.get(
+            f"https://www.wikidata.org/wiki/Special:EntityPage/{resource}",
+            timeout=15,
+        )
+        if r.status_code == 200 and text_confirms_fact(r.text, subject, obj, strict=strict):
+            urls.append(f"https://www.wikidata.org/wiki/{resource}")
+    except Exception as e:
+        logger.debug(f"Wikidata fetch failed: {e}")
+    return urls
+
+
 async def search_wikiwand(subject: str, obj: str,
-                           client: httpx.AsyncClient) -> list[str]:
+                           client: httpx.AsyncClient, strict: bool) -> list[str]:
     """Check Wikiwand (Wikipedia mirror) for the subject article."""
     urls = []
     title = subject.replace(" ", "_")
     url = f"https://www.wikiwand.com/en/articles/{title}"
     try:
         r = await client.get(url, timeout=15)
-        if r.status_code == 200 and text_confirms_fact(r.text, subject, obj):
+        if r.status_code == 200 and text_confirms_fact(r.text, subject, obj, strict=strict):
             urls.append(url)
     except Exception as e:
         logger.debug(f"Wikiwand search failed: {e}")
@@ -274,7 +322,8 @@ async def search_wikiwand(subject: str, obj: str,
 async def enrich_edge(subject: str, rel_type: str, obj: str,
                        existing_sources: list, existing_domains: list,
                        graph: GraphManager,
-                       client: httpx.AsyncClient) -> int:
+                       client: httpx.AsyncClient,
+                       strict: bool = False) -> int:
     """
     Find additional source URLs for a specific edge and add them to Neo4j.
     Returns the number of new sources added.
@@ -289,7 +338,9 @@ async def enrich_edge(subject: str, rel_type: str, obj: str,
         search_archive_org(query, subject, obj, client),
         search_open_library(query, subject, obj, client),
         search_chronicling_america(query, subject, obj, client),
-        search_wikiwand(subject, obj, client),
+        search_wikiwand(subject, obj, client, strict),
+        search_simple_wikipedia(query, subject, obj, client, strict),
+        search_wikidata(subject, obj, client, strict),
         return_exceptions=True,
     )
 
@@ -306,7 +357,9 @@ async def enrich_edge(subject: str, rel_type: str, obj: str,
 
     # Add new sources to the Neo4j edge
     for url in truly_new:
-        domain = url.split("/")[2] if "/" in url else url
+        domain = normalize_netloc(url) or (
+            urlparse(url).netloc.lower() if urlparse(url).netloc else url
+        )
         try:
             with graph.driver.session() as session:
                 session.run(f"""
@@ -323,7 +376,8 @@ async def enrich_edge(subject: str, rel_type: str, obj: str,
 
 
 async def run_enrichment(target_domains: int = 6, limit: int = None,
-                          entity_filter: str = None):
+                          entity_filter: str = None, strict: bool = False,
+                          max_rounds: int = 3):
     """Main enrichment loop."""
     from neo4j import GraphDatabase
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
@@ -377,20 +431,50 @@ async def run_enrichment(target_domains: int = 6, limit: int = None,
                 f"(currently {current_domains} domains)"
             )
 
-            added = await enrich_edge(
-                subject, rel_type, obj,
-                edge['sources'], edge['domains'],
-                graph, client,
-            )
+            added_total = 0
+            for round_num in range(max_rounds):
+                with graph.driver.session() as session:
+                    row = session.run(
+                        f"""
+                        MATCH (s:Entity {{name: $subject}})-[r:{rel_type}]->(o:Entity {{name: $obj}})
+                        RETURN coalesce(r.sources, []) AS sources
+                        """,
+                        subject=subject,
+                        obj=obj,
+                    ).single()
+                current_sources = (row["sources"] if row else None) or edge["sources"]
+                if count_unique_domains(current_sources) >= target_domains:
+                    break
 
-            if added > 0:
-                total_added += added
+                added = await enrich_edge(
+                    subject, rel_type, obj,
+                    current_sources, edge["domains"],
+                    graph, client, strict=strict,
+                )
+                added_total += added
+                if added == 0:
+                    break
+                await asyncio.sleep(0.5)
+
+            if added_total > 0:
+                total_added += added_total
                 enriched_count += 1
-                logger.info(f"  ✓ Added {added} new sources")
+                with graph.driver.session() as session:
+                    row = session.run(
+                        f"""
+                        MATCH (s:Entity {{name: $subject}})-[r:{rel_type}]->(o:Entity {{name: $obj}})
+                        RETURN coalesce(r.sources, []) AS sources
+                        """,
+                        subject=subject,
+                        obj=obj,
+                    ).single()
+                final_n = count_unique_domains((row["sources"] if row else None) or [])
+                logger.info(
+                    f"  ✓ Added {added_total} URLs → {final_n} unique domains on edge"
+                )
             else:
                 logger.debug(f"  - No new sources found")
 
-            # Polite delay between edges
             await asyncio.sleep(1.0)
 
     graph.close()
@@ -400,7 +484,7 @@ async def run_enrichment(target_domains: int = 6, limit: int = None,
         f"  Edges processed: {len(edges)}\n"
         f"  Edges enriched:  {enriched_count}\n"
         f"  New sources added: {total_added}\n"
-        f"\nNow run: python generator\\query_engine.py --min-domains 3 --min-sources 3 --skip-verify"
+        f"\nNow run: python generator\\query_engine.py --min-domains 6 --min-sources 6 --skip-verify"
     )
 
 
@@ -420,12 +504,22 @@ def main():
         "--entity", type=str, default=None,
         help="Only enrich edges involving this entity name"
     )
+    parser.add_argument(
+        "--strict", action="store_true",
+        help="Require both entities in page text (fewer but higher-quality URLs)"
+    )
+    parser.add_argument(
+        "--rounds", type=int, default=3,
+        help="Max enrichment passes per edge (default: 3)"
+    )
     args = parser.parse_args()
 
     asyncio.run(run_enrichment(
         target_domains=args.min_domains,
         limit=args.limit,
         entity_filter=args.entity,
+        strict=args.strict,
+        max_rounds=args.rounds,
     ))
 
 

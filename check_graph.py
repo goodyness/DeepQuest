@@ -125,8 +125,12 @@ def run_check(verbose: bool = False, show_domains: bool = False):
 
         print(f"\n🔗 CHAIN AVAILABILITY")
         print(f"   2-hop chains total:      {chains_1['total']:,}")
-        print(f"   2-hop max domains:       {chains_1['max_d'] or 0}")
+        print(f"   2-hop max domains (sum):   {chains_1['max_d'] or 0}  (can over-count; see below)")
         print(f"   3-hop chains total:      {chains_3['total']:,}")
+
+        print(f"\n🎯 GENERATOR GATE (unique URLs across both hops)")
+        print(f"   Questions need 6 unique netlocs from merged source URLs.")
+        print(f"   If max domains per edge < 6, run: python seeder\\enrich_sources.py --limit 200")
 
         # Chains by threshold
         for threshold in [1, 2, 3, 6, 8]:

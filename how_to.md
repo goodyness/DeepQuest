@@ -113,13 +113,22 @@ python seeder\merge_entities.py
 
 **Recommended seeding workflow:**
 ```powershell
+# Edit seeder/topics.txt first (one Wikipedia title per line, any subject)
 python seeder\inject_infoboxes.py
-python seeder\inject_wikipedia.py
+python seeder\inject_wikipedia.py --topics-file seeder\topics.txt
 python seeder\inject_historical_corpus.py
-python seeder\inject_multisource.py
-python seeder\enrich_sources.py          # NEW: find 6+ sources per edge
+python seeder\inject_multisource.py --topics-file seeder\topics.txt
+python seeder\enrich_sources.py          # find 6+ sources per edge
 python seeder\merge_entities.py
 ```
+
+### Topics file (`seeder/topics.txt`)
+
+- One topic per line; lines starting with `#` are comments.
+- Use normal English (`Los Angeles Lakers`) or underscores (`Los_Angeles_Lakers`).
+- Inline notes: `CRISPR  # gene editing`
+- If the file exists, seeders use it automatically when you omit `--topics`.
+- Override: `--topics "Tesla, Inc." "Python"` or `--topics-file my_topics.txt`
 
 ---
 
@@ -135,9 +144,19 @@ python generator\query_engine.py
 python generator\query_engine.py --min-domains 1 --min-sources 1 --skip-verify
 ```
 
-**Production mode** (full 6-source gate with live verification):
+**Production mode** (6 unique URLs = 6 different websites, live verification optional):
+```powershell
+python generator\query_engine.py --min-domains 6 --min-sources 6 --skip-verify
+```
+
+**Production + live URL check** (slower; many archive URLs fail fetch — use after graph is rich):
 ```powershell
 python generator\query_engine.py --min-domains 6 --min-sources 6
+```
+
+**Auto-enrich weak chains** (generator calls enrich_sources on each chain before rejecting):
+```powershell
+python generator\query_engine.py --min-sources 6 --skip-verify --auto-enrich
 ```
 
 **Historical questions only** (pre-2000 events):
@@ -148,6 +167,52 @@ python generator\query_engine.py --min-year 2000 --min-domains 3 --min-sources 3
 The generator will query the Neo4j graph for multi-hop chains, build narrative prompts, optionally verify sources, and write full-format `.txt` files to `question_generated/`.
 
 **The Source Verifier (`verifier/worker.py`) is called automatically by the generator — you never run it manually.**
+
+---
+
+## Why you are not getting 6 URLs yet
+
+A published question needs **6 different netlocs** (e.g. `en.wikipedia.org`, `dbpedia.org`, `archive.org` — not six pages on Wikipedia).
+
+### Root causes (most common first)
+
+1. **Edges only have 1–2 domains** — Crawler + extractor add one URL per relationship. Multi-hop chains merge hop1 + hop2; if each hop has 2 domains you only have **4** unique sites, not 6.
+2. **`enrich_sources.py` was not run** — This is the main tool that hunts for more URLs for the *same* `(A)-[REL]->(B)` edge. The scheduler now runs it; manual runs still help.
+3. **`inject_multisource` does not guarantee one edge** — It fetches many sites per *topic*, but spaCy may extract *different* triples per site, so domains never stack on one edge.
+4. **Live verification drops URLs** — Without `--skip-verify`, dead links, PDFs, and paywalls fail the fetch/keyword check even when the graph lists 6 URLs.
+5. **Old bug (fixed)** — The generator counted concatenated domain *list length* (double-counting). It now counts **unique netlocs from source URLs**.
+
+### Fix pipeline (run on Docker desktop, any domain — not only history)
+
+```powershell
+docker-compose up -d
+.\venv\Scripts\activate
+
+# 1) Bootstrap graph — edit seeder/topics.txt (one topic per line, any domain)
+python seeder\inject_multisource.py --limit 30
+python seeder\inject_wikipedia.py --limit 30
+python seeder\merge_entities.py
+
+# 2) Attach more URLs to existing edges (critical)
+python seeder\enrich_sources.py --limit 300
+
+# 3) Check readiness
+python check_graph.py
+
+# 4) Generate (graph-only gate first)
+python generator\query_engine.py --min-domains 6 --min-sources 6 --skip-verify
+
+# 5) If still sparse, let generator enrich per chain
+python generator\query_engine.py --min-sources 6 --skip-verify --auto-enrich
+```
+
+### Health check
+
+```powershell
+python check_graph.py
+```
+
+Look for **Max domains on any edge: 6+** and **Chains with 6+ domains**. If max is 2–3, generation will stay at zero until `enrich_sources` runs.
 
 ---
 

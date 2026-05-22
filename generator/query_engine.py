@@ -19,8 +19,14 @@ from urllib.parse import urlparse
 from neo4j import GraphDatabase
 
 # Allow importing verifier from the project root
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(_ROOT)
 from verifier.worker import SourceVerifier, get_key_terms
+from lib.source_utils import (
+    count_unique_domains,
+    format_domain_summary,
+    pick_one_url_per_domain,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("DeepQuest_Generator_V3")
@@ -344,16 +350,8 @@ def is_bad_entity(text: str) -> bool:
 
 
 def get_unique_domains(sources: list) -> list:
-    """Return one URL per unique domain."""
-    domain_map = {}
-    for url in sources:
-        try:
-            domain = urlparse(url).netloc
-            if domain and domain not in domain_map:
-                domain_map[domain] = url
-        except Exception:
-            continue
-    return list(domain_map.values())
+    """Return one URL per unique netloc (normalized, no www duplicate)."""
+    return pick_one_url_per_domain(sources)
 
 
 def score_chain_quality(chain: dict) -> tuple[float, list[str]]:
@@ -432,15 +430,37 @@ def score_chain_quality(chain: dict) -> tuple[float, list[str]]:
 
 
 def chain_hash(chain: dict) -> str:
-    """SHA-256 hash of the chain's key fields, first 8 hex chars."""
-    key = "|".join([
+    """SHA-256 hash of the chain's key fields, first 8 hex chars.
+    Includes action_3/entity_d for 3-hop chains to avoid collisions."""
+    parts = [
         chain.get('entity_a', ''),
         chain.get('action_1', ''),
         chain.get('entity_b', ''),
         chain.get('action_2', ''),
         chain.get('entity_c', ''),
-    ])
+    ]
+    if chain.get('hop_count', 2) == 3:
+        parts.extend([
+            chain.get('action_3', '') or '',
+            chain.get('entity_d', '') or '',
+        ])
+    key = "|".join(parts)
     return hashlib.sha256(key.encode()).hexdigest()[:8]
+
+
+_HASH_FROM_FILENAME_RE = re.compile(r'_([0-9a-f]{8})(?:_\d{4})?\.txt$')
+
+
+def load_existing_hashes(output_dir: str) -> set:
+    """Scan output_dir once and return the set of chain hashes already written."""
+    hashes: set = set()
+    if not os.path.isdir(output_dir):
+        return hashes
+    for fn in os.listdir(output_dir):
+        m = _HASH_FROM_FILENAME_RE.search(fn)
+        if m:
+            hashes.add(m.group(1))
+    return hashes
 
 
 def normalise_name(name: str) -> str:
@@ -712,7 +732,7 @@ class QuestionGenerator:
     # Chain queries
     # ------------------------------------------------------------------
 
-    def find_all_chains(self, min_domains: int = 8) -> list:
+    def find_all_chains(self, min_domains: int = 6) -> list:
         """
         Run three Cypher queries (SVO, ROLE, CONSEQUENCE) and return combined
         results sorted by historical depth priority score.
@@ -816,8 +836,99 @@ class QuestionGenerator:
             except Exception as e:
                 logger.debug(f"3-hop query failed (graph may be too sparse): {e}")
 
+        # Cypher uses concatenated domain list size (can double-count). Filter on
+        # unique netlocs from actual source URLs — this is what the 6-URL gate uses.
+        filtered = []
+        for chain in results:
+            n = count_unique_domains(chain.get("sources", []))
+            if n >= min_domains:
+                chain["unique_domain_count"] = n
+                filtered.append(chain)
+            else:
+                logger.debug(
+                    f"Chain dropped (need {min_domains} unique domains): "
+                    f"{chain.get('entity_a')} → {chain.get('entity_b')} → {chain.get('entity_c')} "
+                    f"| {format_domain_summary(chain.get('sources', []))}"
+                )
+        results = filtered
         results.sort(key=priority_score, reverse=True)
         return results
+
+    def reload_chain_sources(self, chain: dict) -> dict:
+        """Re-fetch merged source URLs for a chain from Neo4j after enrichment."""
+        query = (
+            "MATCH (a:Entity {name: $a})-[r1]->(b:Entity {name: $b})-[r2]->(c:Entity {name: $c}) "
+            "WHERE type(r1) = $rel1 AND type(r2) = $rel2 "
+            "RETURN coalesce(r1.sources, []) + coalesce(r2.sources, []) AS sources, "
+            "       coalesce(r1.domains, []) + coalesce(r2.domains, []) AS domains"
+        )
+        try:
+            with self.driver.session() as session:
+                row = session.run(
+                    query,
+                    a=chain["entity_a"],
+                    b=chain["entity_b"],
+                    c=chain["entity_c"],
+                    rel1=chain["action_1"],
+                    rel2=chain["action_2"],
+                ).single()
+                if row:
+                    chain["sources"] = row["sources"] or []
+                    chain["domains"] = row["domains"] or []
+                    chain["unique_domain_count"] = count_unique_domains(chain["sources"])
+        except Exception as e:
+            logger.warning(f"Could not reload chain sources: {e}")
+        return chain
+
+    async def auto_enrich_chain(self, chain: dict, target_domains: int = 6) -> int:
+        """
+        Run source enrichment on both hops of a chain (in-process).
+        Returns number of new URLs added across both edges.
+        """
+        try:
+            from seeder.enrich_sources import enrich_edge
+            import httpx
+        except ImportError as e:
+            logger.warning(f"Auto-enrich unavailable: {e}")
+            return 0
+
+        from graph.schema import GraphManager
+
+        graph = GraphManager()
+        total_added = 0
+        hops = [
+            (chain["entity_a"], chain["action_1"], chain["entity_b"]),
+            (chain["entity_b"], chain["action_2"], chain["entity_c"]),
+        ]
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; DeepQuestResearch/1.0)",
+            "Accept": "text/html,application/json",
+        }
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+            for subject, rel_type, obj in hops:
+                with graph.driver.session() as session:
+                    row = session.run(
+                        f"""
+                        MATCH (s:Entity {{name: $subject}})-[r:{rel_type}]->(o:Entity {{name: $obj}})
+                        RETURN coalesce(r.sources, []) AS sources, coalesce(r.domains, []) AS domains
+                        """,
+                        subject=subject,
+                        obj=obj,
+                    ).single()
+                if not row:
+                    continue
+                sources = row["sources"] or []
+                domains = row["domains"] or []
+                if count_unique_domains(sources) >= target_domains:
+                    continue
+                added = await enrich_edge(
+                    subject, rel_type, obj, sources, domains, graph, client
+                )
+                total_added += added
+        graph.close()
+        if total_added:
+            self.reload_chain_sources(chain)
+        return total_added
 
     # Backward-compatible alias
     def find_chains(self, min_domains=2):
@@ -858,12 +969,30 @@ class QuestionGenerator:
     # Main generation loop
     # ------------------------------------------------------------------
 
-    def generate(self, min_year: int = None, limit: int = None, min_domains: int = 3,
-                 min_sources: int = 3, skip_verify: bool = False):
+    def generate(self, min_year: int = None, limit: int = None, min_domains: int = 6,
+                 min_sources: int = 6, skip_verify: bool = False, auto_enrich: bool = False):
         logger.info("Starting DeepQuest Generator v3...")
+        logger.info(
+            f"Gate: {min_sources} unique URLs (one per domain) | "
+            f"chain must have {min_domains}+ unique domains in graph | "
+            f"verify={'off' if skip_verify else 'on'} | auto_enrich={'on' if auto_enrich else 'off'}"
+        )
 
         chains = self.find_all_chains(min_domains=min_domains)
-        logger.info(f"Found {len(chains)} candidate chains (pre-filter, min_domains={min_domains}).")
+        logger.info(
+            f"Found {len(chains)} candidate chains with >={min_domains} unique domains in graph."
+        )
+        if not chains:
+            logger.warning(
+                "No chains meet the domain threshold. Run seeders then:\n"
+                "  python seeder/inject_multisource.py --limit 30\n"
+                "  python seeder/enrich_sources.py --limit 200\n"
+                "Edges need the SAME fact on 6+ sites — enrichment attaches URLs per edge."
+            )
+
+        existing_hashes = load_existing_hashes(OUTPUT_DIR)
+        if existing_hashes:
+            logger.info(f"Loaded {len(existing_hashes)} existing chain hashes from {OUTPUT_DIR} (will skip duplicates).")
 
         stats = {
             'total': len(chains),
@@ -871,7 +1000,10 @@ class QuestionGenerator:
             'rejected_min_year': 0,
             'rejected_uniqueness': 0,
             'rejected_sources': 0,
+            'rejected_graph_domains': 0,
             'rejected_narrative': 0,
+            'rejected_duplicate': 0,
+            'enriched': 0,
             'written': 0,
         }
 
@@ -880,6 +1012,12 @@ class QuestionGenerator:
                 break
 
             b = chain.get('entity_b', '')
+
+            # Cross-run dedup — skip chains already written in prior runs
+            h = chain_hash(chain)
+            if h in existing_hashes:
+                stats['rejected_duplicate'] += 1
+                continue
 
             # Chain quality gate — filter noise before any other processing
             quality_score, quality_reasons = score_chain_quality(chain)
@@ -906,9 +1044,12 @@ class QuestionGenerator:
                 stats['rejected_uniqueness'] += 1
                 continue
 
-            # Build narrative (try all 5 variants)
+            # Build narrative — rotate starting variant by chain hash so all 5
+            # templates get exercised across the dataset (not just variant 0).
+            offset = int(h, 16) % 5
             narrative = None
-            for variant in range(5):
+            for step in range(5):
+                variant = (offset + step) % 5
                 narrative = build_narrative(chain, variant)
                 if narrative:
                     break
@@ -918,34 +1059,66 @@ class QuestionGenerator:
                 logger.info(f"No valid narrative for chain {i}: '{b}' (A={chain.get('entity_a','')}, C={chain.get('entity_c','')})")
                 continue
 
-            # Source verification — configurable gate
+            # Source gate — need min_sources distinct netlocs in the output
             sources = chain.get('sources', [])
             unique_sources = get_unique_domains(sources)
+            graph_domain_count = count_unique_domains(sources)
+
+            if graph_domain_count < min_sources and auto_enrich:
+                try:
+                    import asyncio
+                    added = asyncio.run(self.auto_enrich_chain(chain, target_domains=min_sources))
+                    if added:
+                        stats['enriched'] += 1
+                        sources = chain.get('sources', [])
+                        unique_sources = get_unique_domains(sources)
+                        graph_domain_count = count_unique_domains(sources)
+                        logger.info(
+                            f"Auto-enriched chain for {b}: +{added} URLs, "
+                            f"now {format_domain_summary(sources)}"
+                        )
+                except Exception as e:
+                    logger.warning(f"Auto-enrich failed for {b}: {e}")
+
+            if graph_domain_count < min_sources:
+                stats['rejected_graph_domains'] += 1
+                logger.info(
+                    f"Chain {i} rejected (graph): {format_domain_summary(sources)} "
+                    f"| need {min_sources} unique domains. Entity: {b}. "
+                    f"Run: python seeder/enrich_sources.py --entity \"{b}\""
+                )
+                continue
+
             key_terms = get_key_terms(chain)
+            required_terms = [b] if b else None
 
             if skip_verify:
-                # Skip live URL verification — use graph sources directly
-                verified_urls = unique_sources[:10]
-                passed = len(verified_urls) >= min_sources
+                verified_urls = pick_one_url_per_domain(sources)
+                passed = count_unique_domains(verified_urls) >= min_sources
             else:
-                verification = self.verifier.verify(unique_sources, key_terms)
-                verified_urls = verification.verified_urls
-                passed = len(verified_urls) >= min_sources and \
-                         len({urlparse(u).netloc for u in verified_urls}) >= min_sources
+                # Verify one URL per domain; may need all candidate URLs if some fail fetch
+                candidates = pick_one_url_per_domain(sources)
+                verification = self.verifier.verify(
+                    candidates,
+                    key_terms,
+                    required_terms=required_terms,
+                    min_sources=min_sources,
+                )
+                verified_urls = pick_one_url_per_domain(verification.verified_urls)
+                passed = count_unique_domains(verified_urls) >= min_sources
 
             if not passed:
                 stats['rejected_sources'] += 1
                 logger.info(
-                    f"Chain {i} rejected: {len(verified_urls)} sources "
-                    f"(need {min_sources}). Entity: {b}"
+                    f"Chain {i} rejected (sources): {format_domain_summary(verified_urls)} "
+                    f"| need {min_sources}. Entity: {b}"
                 )
                 continue
 
             # Build full output
             output = build_output(chain, verified_urls, narrative)
 
-            # Generate filename
-            h = chain_hash(chain)
+            # Generate filename (h already computed for dedup above)
             anchor_year = parse_year(chain.get('date_1') or chain.get('date_2'))
             year_suffix = f"_{anchor_year}" if anchor_year else ""
             filename = os.path.join(
@@ -958,24 +1131,31 @@ class QuestionGenerator:
                     f.write(output)
                 logger.info(f"Generated → {filename}")
                 stats['written'] += 1
+                existing_hashes.add(h)
             except OSError as e:
                 logger.error(f"Failed to write {filename}: {e}")
 
         # Per-run summary
         logger.info(
             f"Run complete | total={stats['total']} | "
-            f"rejected_entity={stats['rejected_entity']} (includes quality gate) | "
+            f"written={stats['written']} | enriched={stats['enriched']} | "
+            f"rejected_graph_domains={stats['rejected_graph_domains']} | "
+            f"rejected_sources={stats['rejected_sources']} | "
+            f"rejected_duplicate={stats['rejected_duplicate']} | "
+            f"rejected_entity={stats['rejected_entity']} | "
             f"rejected_min_year={stats['rejected_min_year']} | "
             f"rejected_uniqueness={stats['rejected_uniqueness']} | "
-            f"rejected_sources={stats['rejected_sources']} | "
-            f"rejected_narrative={stats['rejected_narrative']} | "
-            f"written={stats['written']}"
+            f"rejected_narrative={stats['rejected_narrative']}"
         )
 
         if stats['written'] == 0:
             logger.warning(
-                "No questions passed the 6-source gate. "
-                "The graph may be too sparse — run the crawler and extractor longer."
+                f"No questions passed the {min_sources}-URL gate. "
+                "Typical fix: enrich edges on the chain, not just crawl more pages.\n"
+                "  python seeder/inject_multisource.py --limit 30\n"
+                "  python seeder/enrich_sources.py --limit 300\n"
+                "  python generator/query_engine.py --min-sources 6 --skip-verify\n"
+                "Or: python generator/query_engine.py --auto-enrich --skip-verify"
             )
             sys.exit(1)
 
@@ -995,16 +1175,20 @@ if __name__ == "__main__":
         help="Stop after writing this many output files"
     )
     parser.add_argument(
-        "--min-domains", type=int, default=3,
-        help="Minimum distinct domains required across a chain's edges (default: 3)"
+        "--min-domains", type=int, default=6,
+        help="Minimum distinct domains required across a chain's edges (default: 6)"
     )
     parser.add_argument(
-        "--min-sources", type=int, default=3,
-        help="Minimum verified source URLs required to publish a question (default: 3)"
+        "--min-sources", type=int, default=6,
+        help="Minimum verified source URLs required to publish a question (default: 6)"
     )
     parser.add_argument(
         "--skip-verify", action="store_true", default=False,
         help="Skip live URL verification — use graph sources directly (faster, less strict)"
+    )
+    parser.add_argument(
+        "--auto-enrich", action="store_true", default=False,
+        help="If a chain has too few domains, run enrich_sources on its edges before rejecting"
     )
     args = parser.parse_args()
 
@@ -1016,6 +1200,7 @@ if __name__ == "__main__":
             min_domains=args.min_domains,
             min_sources=args.min_sources,
             skip_verify=args.skip_verify,
+            auto_enrich=args.auto_enrich,
         )
     finally:
         gen.close()

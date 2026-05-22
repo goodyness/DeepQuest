@@ -17,7 +17,8 @@ Sources used per topic:
 
 Usage:
     python seeder/inject_multisource.py
-    python seeder/inject_multisource.py --topics "Standard Oil" "Napoleon"
+    python seeder/inject_multisource.py --topics-file seeder/topics.txt
+    python seeder/inject_multisource.py --topics "Standard Oil" "Los Angeles Lakers"
     python seeder/inject_multisource.py --limit 20
 """
 
@@ -30,8 +31,11 @@ import os
 import sys
 
 import httpx
+from urllib.parse import urlparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from lib.source_utils import normalize_netloc
+from lib.topics import add_topics_file_argument, resolve_topics
 from extractor.worker import extract_all, clean_html
 from graph.schema import GraphManager
 
@@ -306,7 +310,7 @@ async def run_multisource_injection(topics: list[str]):
                     continue
 
                 url, html = result
-                domain = url.split("/")[2]  # extract netloc
+                domain = normalize_netloc(url) or urlparse(url).netloc.lower()
 
                 stats = await inject_from_source(topic, url, html, domain, graph, conn)
                 topic_svo += stats['svo']
@@ -345,15 +349,25 @@ async def run_multisource_injection(topics: list[str]):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Inject historical topics from 6 independent source domains simultaneously"
+        description="Inject topics from multiple source domains (see seeder/topics.txt)"
     )
-    parser.add_argument("--topics", nargs="+", default=None)
+    parser.add_argument(
+        "--topics", nargs="+", default=None,
+        help="Topic titles (spaces ok; converted to Wikipedia underscores)",
+    )
+    add_topics_file_argument(parser, default=None)
     parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
 
-    topics = args.topics if args.topics else DEFAULT_TOPICS
-    if args.limit:
-        topics = topics[:args.limit]
+    topics = resolve_topics(
+        cli_topics=args.topics,
+        topics_file=args.topics_file,
+        default_topics=DEFAULT_TOPICS,
+        limit=args.limit,
+    )
+    if not topics:
+        logger.error("No topics to process. Add lines to seeder/topics.txt or pass --topics.")
+        sys.exit(1)
 
     asyncio.run(run_multisource_injection(topics))
 

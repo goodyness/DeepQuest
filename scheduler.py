@@ -5,9 +5,11 @@ Runs the full DeepQuest pipeline on a schedule:
   1. Inject infoboxes (high-precision structured facts)
   2. Inject Wikipedia articles
   3. Inject historical corpus (Chronicling America, Archive.org)
-  4. Merge duplicate entities
-  5. Detect contradictions
-  6. Generate questions
+  4. Inject multi-source topics
+  5. Enrich edges to 6+ domains
+  6. Merge duplicate entities
+  7. Detect contradictions
+  8. Generate questions
 
 Designed to run continuously in the background alongside the crawler and extractor.
 
@@ -76,8 +78,8 @@ def run_step(name: str, args: list[str], timeout: int = 600) -> bool:
         return False
 
 
-def run_pipeline(skip_inject: bool = False, min_domains: int = 2,
-                 min_sources: int = 2, skip_verify: bool = True):
+def run_pipeline(skip_inject: bool = False, min_domains: int = 6,
+                 min_sources: int = 6, skip_verify: bool = True):
     """Run the full pipeline once."""
     logger.info("=" * 60)
     logger.info(f"Pipeline run started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -94,7 +96,10 @@ def run_pipeline(skip_inject: bool = False, min_domains: int = 2,
 
         # Step 2: Inject Wikipedia articles
         steps_run += 1
-        if run_step("Inject Wikipedia", [PYTHON, "seeder/inject_wikipedia.py"], timeout=600):
+        if run_step("Inject Wikipedia",
+                    [PYTHON, "seeder/inject_wikipedia.py",
+                     "--topics-file", "seeder/topics.txt", "--limit", "20"],
+                    timeout=600):
             steps_ok += 1
 
         # Step 3: Inject historical corpus (limited to 10 results per query to be fast)
@@ -104,18 +109,33 @@ def run_pipeline(skip_inject: bool = False, min_domains: int = 2,
                     timeout=600):
             steps_ok += 1
 
-        # Step 4: Merge duplicate entities
+        # Step 4: Multi-source injection (many domains per topic fetch)
+        steps_run += 1
+        if run_step("Inject Multi-Source",
+                    [PYTHON, "seeder/inject_multisource.py",
+                     "--topics-file", "seeder/topics.txt", "--limit", "15"],
+                    timeout=900):
+            steps_ok += 1
+
+        # Step 5: Enrich edges to 6+ domains (required for 6-URL questions)
+        steps_run += 1
+        if run_step("Enrich Sources",
+                    [PYTHON, "seeder/enrich_sources.py", "--limit", "100"],
+                    timeout=1800):
+            steps_ok += 1
+
+        # Step 6: Merge duplicate entities
         steps_run += 1
         if run_step("Merge Entities", [PYTHON, "seeder/merge_entities.py"], timeout=120):
             steps_ok += 1
 
-        # Step 5: Detect contradictions
+        # Step 7: Detect contradictions
         steps_run += 1
         if run_step("Detect Contradictions",
                     [PYTHON, "seeder/detect_contradictions.py"], timeout=120):
             steps_ok += 1
 
-    # Step 6: Generate questions
+    # Step 8: Generate questions
     gen_args = [
         PYTHON, "generator/query_engine.py",
         "--min-domains", str(min_domains),
@@ -128,7 +148,7 @@ def run_pipeline(skip_inject: bool = False, min_domains: int = 2,
     if run_step("Generate Questions", gen_args, timeout=300):
         steps_ok += 1
 
-    # Step 7: Export results
+    # Step 9: Export results
     steps_run += 1
     if run_step("Export Questions", [PYTHON, "evaluator/export.py"], timeout=60):
         steps_ok += 1
@@ -152,10 +172,10 @@ def main():
                         help="Run once and exit")
     parser.add_argument("--skip-inject", action="store_true",
                         help="Skip seeding steps, only generate questions")
-    parser.add_argument("--min-domains", type=int, default=2,
-                        help="Min domains for generator (default: 2)")
-    parser.add_argument("--min-sources", type=int, default=2,
-                        help="Min sources for generator (default: 2)")
+    parser.add_argument("--min-domains", type=int, default=6,
+                        help="Min domains for generator (default: 6)")
+    parser.add_argument("--min-sources", type=int, default=6,
+                        help="Min sources for generator (default: 6)")
     parser.add_argument("--no-skip-verify", action="store_true",
                         help="Enable live URL verification (slower)")
     args = parser.parse_args()
